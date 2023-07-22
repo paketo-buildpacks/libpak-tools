@@ -14,35 +14,19 @@
  * limitations under the License.
  */
 
-package main
+package commands
 
 import (
-	"flag"
-	"fmt"
-	"log"
-	"os"
-
-	"github.com/paketo-buildpacks/libpak/carton"
+	"github.com/spf13/cobra"
 )
 
-func main() {
-	i := carton.BuildImageDependency{}
-
-	flagSet := flag.NewFlagSet("Update Build Image Dependency", flag.ExitOnError)
-	flagSet.StringVar(&i.BuilderPath, "builder-toml", "", "path to builder.toml")
-	flagSet.StringVar(&i.Version, "version", "", "the new version of the dependency")
-
-	if err := flagSet.Parse(os.Args[1:]); err != nil {
-		log.Fatal(fmt.Errorf("unable to parse flags\n%w", err))
+func DependencyCommand() *cobra.Command {
+	var dependencyCmd = &cobra.Command{
+		Use:   "dependency",
+		Short: "Interact with dependencies",
 	}
 
-	if i.BuilderPath == "" {
-		log.Fatal("builder-toml must be set")
-	}
+	dependencyCmd.AddCommand(DependencyUpdateCommand())
 
-	if i.Version == "" {
-		log.Fatal("version must be set")
-	}
-
-	i.Update()
+	return dependencyCmd
 }

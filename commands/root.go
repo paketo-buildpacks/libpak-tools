@@ -14,35 +14,27 @@
  * limitations under the License.
  */
 
-package main
+package commands
 
 import (
-	"flag"
-	"fmt"
-	"log"
 	"os"
 
-	"github.com/paketo-buildpacks/libpak/carton"
+	"github.com/spf13/cobra"
 )
 
-func main() {
-	l := carton.LifecycleDependency{}
+var rootCmd = &cobra.Command{
+	Use:   "libpak-tools",
+	Short: "A set of tools for managing Paketo libpak based buildpacks",
+}
 
-	flagSet := flag.NewFlagSet("Update Lifecycle Dependency", flag.ExitOnError)
-	flagSet.StringVar(&l.BuilderPath, "builder-toml", "", "path to builder.toml")
-	flagSet.StringVar(&l.Version, "version", "", "the new version of the dependency")
-
-	if err := flagSet.Parse(os.Args[1:]); err != nil {
-		log.Fatal(fmt.Errorf("unable to parse flags\n%w", err))
+func Execute() {
+	err := rootCmd.Execute()
+	if err != nil {
+		os.Exit(1)
 	}
+}
 
-	if l.BuilderPath == "" {
-		log.Fatal("builder-toml must be set")
-	}
-
-	if l.Version == "" {
-		log.Fatal("version must be set")
-	}
-
-	l.Update()
+func init() {
+	rootCmd.AddCommand(PackageCommand())
+	rootCmd.AddCommand(DependencyCommand())
 }
