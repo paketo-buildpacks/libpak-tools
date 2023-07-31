@@ -2,7 +2,7 @@
 
 This repository pulls together and publishes a number of helpful tools for the management and release of buildpacks.
 
-## `libpak-tools package create``
+## `libpak-tools package create`
 
 The `package create` command creates a `libpak.Package` and calls `libpak.Package.Create()`. This takes a Paketo buildpack written in Go and packages is it into a buildpack. That involves compiling the source code, possibly copying in additional resource files, and generating the buildpack in the given output directory.
 
