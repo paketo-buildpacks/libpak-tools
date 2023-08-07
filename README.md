@@ -26,7 +26,7 @@ Flags:
 
 ## `libpak-tools dependency update build-image`
 
-The `dependency update build-image` command is used to update depenencies in a build image dependency in a builder configuration file. It takes as an argument the builder configuration file and the new version.
+The `dependency update build-image` command is used to update dependencies in a build image dependency in a builder configuration file. It takes as an argument the builder configuration file and the new version.
 
 ```
 > libpak-tools dependency update build-image -h
