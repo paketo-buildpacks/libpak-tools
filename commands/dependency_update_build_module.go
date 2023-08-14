@@ -19,7 +19,7 @@ package commands
 import (
 	"log"
 
-	"github.com/paketo-buildpacks/libpak/carton"
+	"github.com/paketo-buildpacks/libpak/v2/carton"
 	"github.com/spf13/cobra"
 )
 
