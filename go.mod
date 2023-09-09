@@ -3,7 +3,7 @@ module github.com/paketo-buildpacks/libpak-tools
 go 1.20
 
 require (
-	github.com/paketo-buildpacks/libpak/v2 v2.0.0-alpha.2
+	github.com/paketo-buildpacks/libpak/v2 v2.0.0-alpha.3
 	github.com/spf13/cobra v1.7.0
 )
 
