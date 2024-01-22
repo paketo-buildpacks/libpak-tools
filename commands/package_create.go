@@ -25,12 +25,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func PackageCreateCommand() *cobra.Command {
+func PackageCompileCommand() *cobra.Command {
 	p := carton.Package{}
 
 	var packageCreateCommand = &cobra.Command{
-		Use:   "create",
-		Short: "Create a package from buildpack source code",
+		Use:   "compile",
+		Short: "Compile buildpack source code",
 		Run: func(cmd *cobra.Command, args []string) {
 			if p.Destination == "" {
 				log.Fatal("destination must be set")
