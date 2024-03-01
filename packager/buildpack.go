@@ -121,7 +121,7 @@ func (p *BundleBuildpack) InferBuildpackVersion() error {
 }
 
 // CleanUpDockerImages removes dangling docker images created by the build process
-func (p BundleBuildpack) CleanUpDockerImages() error {
+func (p *BundleBuildpack) CleanUpDockerImages() error {
 	buf := &bytes.Buffer{}
 	err := p.executor.Execute(effect.Execution{
 		Command: "docker",
@@ -167,7 +167,7 @@ func (p BundleBuildpack) CleanUpDockerImages() error {
 }
 
 // ExecutePackage runs the package buildpack command
-func (p BundleBuildpack) ExecutePackage(tmpDir string) error {
+func (p *BundleBuildpack) ExecutePackage(tmpDir string) error {
 	pullPolicy, found := os.LookupEnv("BP_PULL_POLICY")
 	if !found {
 		pullPolicy = "if-not-present"
@@ -193,7 +193,7 @@ func (p BundleBuildpack) ExecutePackage(tmpDir string) error {
 }
 
 // CompilePackage compiles the buildpack's Go code
-func (p BundleBuildpack) CompilePackage(tmpDir string) {
+func (p *BundleBuildpack) CompilePackage(tmpDir string) {
 	pkg := carton.Package{}
 	pkg.Source = p.BuildpackPath
 	pkg.Version = p.BuildpackVersion
@@ -213,7 +213,7 @@ func (p BundleBuildpack) CompilePackage(tmpDir string) {
 }
 
 // Execute runs the package buildpack command
-func (p BundleBuildpack) Execute() error {
+func (p *BundleBuildpack) Execute() error {
 	tmpDir, err := os.MkdirTemp("", "BundleBuildpack")
 	if err != nil {
 		return fmt.Errorf("unable to create temporary directory\n%w", err)
