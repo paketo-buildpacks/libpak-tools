@@ -166,7 +166,7 @@ func (p BundleBuildpack) CleanUpDockerImages() error {
 	return nil
 }
 
-// Execute runs the package buildpack command
+// ExecutePackage runs the package buildpack command
 func (p BundleBuildpack) ExecutePackage(tmpDir string) error {
 	pullPolicy, found := os.LookupEnv("BP_PULL_POLICY")
 	if !found {
