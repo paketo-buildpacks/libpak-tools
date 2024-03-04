@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 the original author or authors.
+ * Copyright 2018-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,17 @@
  * limitations under the License.
  */
 
-package commands
+package packager_test
 
 import (
-	"github.com/spf13/cobra"
+	"testing"
+
+	"github.com/sclevine/spec"
+	"github.com/sclevine/spec/report"
 )
 
-func PackageCommand() *cobra.Command {
-	var packageCmd = &cobra.Command{
-		Use:   "package",
-		Short: "Interact with packages",
-	}
-
-	packageCmd.AddCommand(PackageCompileCommand())
-	packageCmd.AddCommand(PackageBundleCommand())
-
-	return packageCmd
+func TestUnit(t *testing.T) {
+	suite := spec.New("libpak-tools/packager", spec.Report(report.Terminal{}))
+	suite("Buildpack", testBuildpack)
+	suite.Run(t)
 }
