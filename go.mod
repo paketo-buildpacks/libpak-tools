@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/paketo-buildpacks/libpak/v2 v2.0.0-alpha.3
 	github.com/spf13/cobra v1.8.0
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 )
 
 require (
@@ -13,8 +13,8 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
-	github.com/stretchr/objx v0.5.1 // indirect
-	golang.org/x/net v0.20.0 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
+	golang.org/x/net v0.22.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
@@ -34,5 +34,5 @@ require (
 	github.com/onsi/gomega v1.31.1
 	github.com/sclevine/spec v1.4.0
 	github.com/spf13/pflag v1.0.5 // indirect
-	golang.org/x/sys v0.17.0 // indirect
+	golang.org/x/sys v0.18.0 // indirect
 )
