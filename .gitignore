@@ -13,6 +13,8 @@
 # limitations under the License.
 
 bin/
-binaries/
-dist/
-go.work*
+linux/
+dependencies/
+package/
+scratch/
+
