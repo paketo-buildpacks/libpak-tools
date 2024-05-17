@@ -2,24 +2,46 @@
 
 This repository pulls together and publishes a number of helpful tools for the management and release of buildpacks.
 
-## `libpak-tools package create`
+## `libpak-tools package compile`
 
-The `package create` command creates a `libpak.Package` and calls `libpak.Package.Create()`. This takes a Paketo buildpack written in Go and packages is it into a buildpack. That involves compiling the source code, possibly copying in additional resource files, and generating the buildpack in the given output directory.
+The `package compile` command creates a `libpak.Package` and calls `libpak.Package.Create()`. This takes a Paketo buildpack written in Go and packages is it into a buildpack. That involves compiling the source code, possibly copying in additional resource files, and generating the buildpack in the given output directory. The key is that the output of this command is a *directory*. If you want it to output an image, use `libpak-tools package bundle`.
 
 ```
-> libpak-tools package create -h
-Create a package from buildpack source code
+> libpak-tools package compile -h
+Compile buildpack source code
 
 Usage:
-  libpak-tools package create [flags]
+  libpak-tools package compile [flags]
 
 Flags:
       --cache-location string           path to cache downloaded dependencies (default: $PWD/dependencies)
       --dependency-filter stringArray   one or more filters that are applied to exclude dependencies
       --destination string              path to the build package destination directory
-  -h, --help                            help for create
+  -h, --help                            help for compile
       --include-dependencies            whether to include dependencies (default: false)
       --source string                   path to build package source directory (default: $PWD) (default "/Users/dmikusa/Code/OSS/paketo-buildpacks/libpak-tools")
+      --strict-filters                  require filter to match all data or just some data (default: false)
+      --version string                  version to substitute into buildpack.toml/extension.toml
+```
+
+## `libpak-tools package bundle`
+
+The `package bundle` does the same thing as `libpak-tools package compile` but then runs `pack buildpack package` as well, so the output is a buildpack image.
+
+```
+> libpak-tools package bundle -h
+Compile and package a single buildpack
+
+Usage:
+  libpak-tools package bundle [flags]
+
+Flags:
+      --buildpack-id string             id of the buildpack to use
+      --buildpack-path string           path to buildpack directory
+      --cache-location string           path to cache downloaded dependencies (default: $PWD/dependencies)
+      --dependency-filter stringArray   one or more filters that are applied to exclude dependencies
+  -h, --help                            help for bundle
+      --include-dependencies            whether to include dependencies (default: false)
       --strict-filters                  require filter to match all data or just some data (default: false)
       --version string                  version to substitute into buildpack.toml/extension.toml
 ```
