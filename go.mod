@@ -1,6 +1,6 @@
 module github.com/paketo-buildpacks/libpak-tools
 
-go 1.20
+go 1.22
 
 require (
 	github.com/paketo-buildpacks/libpak/v2 v2.0.0-alpha.3
