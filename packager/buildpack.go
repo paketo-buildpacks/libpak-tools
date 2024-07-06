@@ -22,6 +22,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/buildpacks/libcnb/v2"
@@ -50,6 +51,12 @@ type BundleBuildpack struct {
 
 	// IncludeDependencies indicates whether to include dependencies in build package.
 	IncludeDependencies bool
+
+	// RegistryName is the prefix to use when publishing the buildpack
+	RegistryName string
+
+	// Publish indicates whether to publish the buildpack to the registry
+	Publish bool
 
 	executor    effect.Executor
 	exitHandler libcnb.ExitHandler
@@ -173,17 +180,30 @@ func (p *BundleBuildpack) ExecutePackage(tmpDir string) error {
 		pullPolicy = "if-not-present"
 	}
 
+	imageName := p.BuildpackID
+	if p.RegistryName != "" {
+		imageName = p.RegistryName
+	}
+
+	args := []string{
+		"buildpack",
+		"package",
+		imageName,
+		"--pull-policy", pullPolicy,
+	}
+
+	if p.Publish {
+		args = append(args, "--publish")
+	} else {
+		args = append(args, "--target", archFromSystem())
+	}
+
 	err := p.executor.Execute(effect.Execution{
 		Command: "pack",
-		Args: []string{
-			"buildpack",
-			"package",
-			p.BuildpackID,
-			"--pull-policy", pullPolicy,
-		},
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-		Dir:    tmpDir,
+		Args:    args,
+		Stdout:  os.Stdout,
+		Stderr:  os.Stderr,
+		Dir:     tmpDir,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to execute `pack buildpack package` command\n%w", err)
@@ -238,4 +258,13 @@ func (p *BundleBuildpack) Execute() error {
 	}
 
 	return nil
+}
+
+func archFromSystem() string {
+	archFromEnv, ok := os.LookupEnv("BP_ARCH")
+	if !ok {
+		archFromEnv = runtime.GOARCH
+	}
+
+	return "linux/" + archFromEnv
 }
