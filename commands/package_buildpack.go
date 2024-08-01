@@ -47,6 +47,10 @@ func PackageBundleCommand() *cobra.Command {
 				p.InferBuildpackVersion()
 			}
 
+			if p.RegistryName == "" {
+				p.RegistryName = p.BuildpackID
+			}
+
 			err := p.Execute()
 			if err != nil {
 				log.Fatal(err)
@@ -61,6 +65,8 @@ func PackageBundleCommand() *cobra.Command {
 	packageBuildpackCmd.Flags().BoolVar(&p.IncludeDependencies, "include-dependencies", false, "whether to include dependencies (default: false)")
 	packageBuildpackCmd.Flags().StringArrayVar(&p.DependencyFilters, "dependency-filter", []string{}, "one or more filters that are applied to exclude dependencies")
 	packageBuildpackCmd.Flags().BoolVar(&p.StrictDependencyFilters, "strict-filters", false, "require filter to match all data or just some data (default: false)")
+	packageBuildpackCmd.Flags().StringVar(&p.RegistryName, "registry-name", "", "prefix for the registry to publish to (default: your buildpack id)")
+	packageBuildpackCmd.Flags().BoolVar(&p.Publish, "publish", false, "publish the buildpack to a buildpack registry (default: false)")
 
 	return packageBuildpackCmd
 }

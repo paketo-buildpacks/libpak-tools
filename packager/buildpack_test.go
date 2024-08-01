@@ -246,6 +246,8 @@ func testBuildpack(t *testing.T, context spec.G, it spec.S) {
 
 		it.Before(func() {
 			mockExecutor = &mocks.Executor{}
+
+			t.Setenv("BP_ARCH", "amd64")
 		})
 
 		it("defaults pull policy to if-not-present", func() {
@@ -256,11 +258,33 @@ func testBuildpack(t *testing.T, context spec.G, it spec.S) {
 					e.Args[2] == "some-id" &&
 					e.Args[3] == "--pull-policy" &&
 					e.Args[4] == "if-not-present" &&
+					e.Args[5] == "--target" &&
+					e.Args[6] == "linux/amd64" &&
 					e.Dir == "/some/path"
 			})).Return(nil)
 
 			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
 			p.BuildpackID = "some-id"
+
+			Expect(p.ExecutePackage("/some/path")).To(Succeed())
+		})
+
+		it("include registry prefix if set", func() {
+			mockExecutor.On("Execute", mock.MatchedBy(func(e effect.Execution) bool {
+				return e.Command == "pack" &&
+					e.Args[0] == "buildpack" &&
+					e.Args[1] == "package" &&
+					e.Args[2] == "docker.io/some-other-id/image" &&
+					e.Args[3] == "--pull-policy" &&
+					e.Args[4] == "if-not-present" &&
+					e.Args[5] == "--publish" &&
+					e.Dir == "/some/path"
+			})).Return(nil)
+
+			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
+			p.BuildpackID = "some-id"
+			p.RegistryName = "docker.io/some-other-id/image"
+			p.Publish = true
 
 			Expect(p.ExecutePackage("/some/path")).To(Succeed())
 		})
@@ -278,6 +302,8 @@ func testBuildpack(t *testing.T, context spec.G, it spec.S) {
 						e.Args[2] == "some-id" &&
 						e.Args[3] == "--pull-policy" &&
 						e.Args[4] == "always" &&
+						e.Args[5] == "--target" &&
+						e.Args[6] == "linux/amd64" &&
 						e.Dir == "/some/path"
 				})).Return(nil)
 
@@ -298,9 +324,11 @@ func testBuildpack(t *testing.T, context spec.G, it spec.S) {
 		it.Before(func() {
 			mockExecutor = &mocks.Executor{}
 			mockExitHandler = exMocks.ExitHandler{}
+
+			t.Setenv("BP_ARCH", "amd64")
 		})
 
-		it("", func() {
+		it("compiles the package", func() {
 			mockExecutor.On("Execute", mock.MatchedBy(func(e effect.Execution) bool {
 				return e.Command == "pack" &&
 					e.Args[0] == "buildpack" &&
@@ -308,6 +336,8 @@ func testBuildpack(t *testing.T, context spec.G, it spec.S) {
 					e.Args[2] == "some-id" &&
 					e.Args[3] == "--pull-policy" &&
 					e.Args[4] == "if-not-present" &&
+					e.Args[5] == "--target" &&
+					e.Args[6] == "linux/amd64" &&
 					e.Dir == "/some/path"
 			})).Return(nil)
 
