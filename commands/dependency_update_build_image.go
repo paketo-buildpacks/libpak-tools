@@ -19,8 +19,9 @@ package commands
 import (
 	"log"
 
-	"github.com/paketo-buildpacks/libpak/v2/carton"
 	"github.com/spf13/cobra"
+
+	"github.com/paketo-buildpacks/libpak-tools/carton"
 )
 
 func DependencyUpdateBuildImageCommand() *cobra.Command {

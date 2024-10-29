@@ -21,12 +21,12 @@ require (
 
 require (
 	dario.cat/mergo v1.0.1 // indirect
-	github.com/BurntSushi/toml v1.4.0 // indirect
+	github.com/BurntSushi/toml v1.4.0
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/semver/v3 v3.3.0 // indirect
-	github.com/buildpacks/libcnb/v2 v2.0.0-rc.1
+	github.com/buildpacks/libcnb/v2 v2.0.0
 	github.com/creack/pty v1.1.23 // indirect
-	github.com/heroku/color v0.0.6 // indirect
+	github.com/heroku/color v0.0.6
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
