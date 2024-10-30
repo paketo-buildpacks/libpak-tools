@@ -26,8 +26,9 @@ import (
 	"strings"
 
 	"github.com/buildpacks/libcnb/v2"
-	"github.com/paketo-buildpacks/libpak/v2/carton"
 	"github.com/paketo-buildpacks/libpak/v2/effect"
+
+	"github.com/paketo-buildpacks/libpak-tools/carton"
 )
 
 type BundleBuildpack struct {
