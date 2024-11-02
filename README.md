@@ -125,6 +125,17 @@ Flags:
       --version string        the new version of the dependency
 ```
 
+## Making a Release
+
+The project uses Goreleaser for release management. The following steps can be used to cut a release.
+
+1. Tag a new release. `git tag -a vX.Y.Z -m "vX.Y.Z Release"`
+2. Push up the tag. `git push origin vX.Y.Z`
+3. Set Github Token. `export GITHUB_TOKEN=<your-release-token>`
+4. Run Goreleaser. `goreleaser release`
+
+You can install Goreleaser with `brew install goreleaser`.
+
 ## License
 
 This library is released under version 2.0 of the [Apache License][a].
