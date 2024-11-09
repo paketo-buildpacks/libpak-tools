@@ -85,6 +85,8 @@ func DependencyUpdateBuildModuleCommand() *cobra.Command {
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.PURLPattern, "purl-pattern", "", "the purl version pattern of the dependency, if not set defaults to version-pattern")
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.CPE, "cpe", "", "the new version use in all CPEs, if not set defaults to version")
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.CPEPattern, "cpe-pattern", "", "the cpe version pattern of the dependency, if not set defaults to version-pattern")
+	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.Source, "source", "", "the new uri of the dependency source")
+	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.SourceSHA256, "source-sha256", "", "the new sha256 of the dependency source")
 
 	return dependencyUpdateBuildModuleCmd
 }
