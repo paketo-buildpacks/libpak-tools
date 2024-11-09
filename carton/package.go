@@ -35,6 +35,8 @@ import (
 	"github.com/paketo-buildpacks/libpak/v2/utils"
 )
 
+const DefaultTargetArch = "all"
+
 // Package is an object that contains the configuration for building a package.
 type Package struct {
 
@@ -58,6 +60,9 @@ type Package struct {
 
 	// Version is a version to substitute into an existing buildpack.toml.
 	Version string
+
+	// TargetArch is the target architecture to package. Default is "all".
+	TargetArch string
 }
 
 // Create creates a package.
@@ -149,7 +154,8 @@ func (p Package) Create(options ...Option) {
 		}
 	}
 
-	if len(supportedTargets) == 0 {
+	oldOutputFormat := len(supportedTargets) == 0
+	if oldOutputFormat {
 		logger.Body("No supported targets found, defaulting to old format")
 	}
 
@@ -158,7 +164,7 @@ func (p Package) Create(options ...Option) {
 	entries := map[string]string{}
 
 	for _, i := range metadata.IncludeFiles {
-		if len(supportedTargets) == 0 || strings.HasPrefix(i, "linux/") || i == "buildpack.toml" {
+		if oldOutputFormat || strings.HasPrefix(i, "linux/") || i == "buildpack.toml" {
 			entries[i] = filepath.Join(p.Source, i)
 		} else {
 			for _, target := range supportedTargets {
@@ -276,8 +282,18 @@ func (p Package) Create(options ...Option) {
 	}
 	sort.Strings(files)
 	for _, d := range files {
-		logger.Bodyf("Adding %s", d)
-		file = filepath.Join(p.Destination, d)
+		if p.TargetArch != DefaultTargetArch && !oldOutputFormat && strings.HasPrefix(d, "linux/") && !strings.HasPrefix(d, fmt.Sprintf("linux/%s", p.TargetArch)) {
+			logger.Debugf("Skipping %s because target arch is %s", d, p.TargetArch)
+			continue
+		}
+
+		targetLocation := d
+		if p.TargetArch != DefaultTargetArch {
+			targetLocation = strings.Replace(d, fmt.Sprintf("linux/%s/", p.TargetArch), "", 1)
+		}
+
+		logger.Bodyf("Adding %s", targetLocation)
+		file = filepath.Join(p.Destination, targetLocation)
 		if err = config.entryWriter.Write(entries[d], file); err != nil {
 			config.exitHandler.Error(fmt.Errorf("unable to write file %s to %s\n%w", entries[d], file, err))
 			return
