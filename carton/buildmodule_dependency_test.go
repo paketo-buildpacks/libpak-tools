@@ -75,6 +75,7 @@ source-sha256 = "test-source-sha256-1"
 		d := carton.BuildModuleDependency{
 			BuildModulePath: path,
 			ID:              "test-id",
+			Arch:            "amd64",
 			SHA256:          "test-sha256-2",
 			URI:             "test-uri-2",
 			Version:         "test-version-2",
@@ -124,6 +125,7 @@ cpes    = ["cpe:2.3:a:test-vendor:test-product:test-version-1:patch1:*:*:*:*:*:*
 		d := carton.BuildModuleDependency{
 			BuildModulePath: path,
 			ID:              "test-id",
+			Arch:            "amd64",
 			SHA256:          "test-sha256-2",
 			URI:             "test-uri-2",
 			Version:         "test-version-2",
@@ -174,6 +176,7 @@ cpes    = ["cpe:2.3:a:test-vendor:test-product:test-version-1:patch1:*:*:*:*:*:*
 		d := carton.BuildModuleDependency{
 			BuildModulePath: path,
 			ID:              "test-id",
+			Arch:            "amd64",
 			SHA256:          "test-sha256-2",
 			URI:             "test-uri-2",
 			Version:         "test-version-2",
@@ -243,6 +246,7 @@ source-sha256 = "test-source-sha256-2"
 		d := carton.BuildModuleDependency{
 			BuildModulePath: path,
 			ID:              "test-id",
+			Arch:            "amd64",
 			SHA256:          "test-sha256-3",
 			URI:             "test-uri-3",
 			Version:         "test-version-3",
@@ -309,6 +313,7 @@ cpes    = ["cpe:2.3:a:test-vendor:test-product:test-version-1:patch1:*:*:*:*:*:*
 		d := carton.BuildModuleDependency{
 			BuildModulePath: path,
 			ID:              "test-id",
+			Arch:            "amd64",
 			SHA256:          "test-sha256-2",
 			URI:             "test-uri-2",
 			Version:         "test-version-2",
@@ -359,6 +364,7 @@ cpes    = ["cpe:2.3:a:test-vendor:test-product:test-version-1:patch1:*:*:*:*:*:*
 		d := carton.BuildModuleDependency{
 			BuildModulePath: path,
 			ID:              "test-id",
+			Arch:            "amd64",
 			SHA256:          "test-sha256-2",
 			URI:             "test-uri-2",
 			Version:         "test-version-2",
@@ -410,6 +416,7 @@ cpes    = 1234
 		d := carton.BuildModuleDependency{
 			BuildModulePath: path,
 			ID:              "test-id",
+			Arch:            "amd64",
 			SHA256:          "test-sha256-2",
 			URI:             "test-uri-2",
 			Version:         "test-version-2",
@@ -463,6 +470,7 @@ version = "1.2.3"
 		d := carton.BuildModuleDependency{
 			BuildModulePath: path,
 			ID:              "test-id",
+			Arch:            "amd64",
 			SHA256:          "test-sha256-2",
 			URI:             "test-uri-2",
 			Version:         "test-version-2",

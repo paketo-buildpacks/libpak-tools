@@ -36,6 +36,7 @@ const (
 type BuildModuleDependency struct {
 	BuildModulePath string
 	ID              string
+	Arch            string
 	SHA256          string
 	URI             string
 	Version         string
@@ -59,11 +60,12 @@ func (b BuildModuleDependency) Update(options ...Option) {
 
 	logger := log.NewPaketoLogger(os.Stdout)
 	_, _ = fmt.Fprintf(logger.TitleWriter(), "\n%s\n", log.FormatIdentity(b.ID, b.VersionPattern))
-	logger.Headerf("Version: %s", b.Version)
-	logger.Headerf("PURL:    %s", b.PURL)
-	logger.Headerf("CPEs:    %s", b.CPE)
-	logger.Headerf("URI:     %s", b.URI)
-	logger.Headerf("SHA256:  %s", b.SHA256)
+	logger.Headerf("Arch:         %s", b.Arch)
+	logger.Headerf("Version:      %s", b.Version)
+	logger.Headerf("PURL:         %s", b.PURL)
+	logger.Headerf("CPEs:         %s", b.CPE)
+	logger.Headerf("URI:          %s", b.URI)
+	logger.Headerf("SHA256:       %s", b.SHA256)
 	logger.Headerf("Source:       %s", b.Source)
 	logger.Headerf("SourceSHA256: %s", b.SourceSHA256)
 
@@ -142,7 +144,27 @@ func (b BuildModuleDependency) Update(options ...Option) {
 			continue
 		}
 
-		if depID == b.ID {
+		// extract the arch from the PURL, it's the only place it lives consistently at the moment
+		var depArch string
+		purlUnwrapped, found := dep["purl"]
+		if found {
+			purl, ok := purlUnwrapped.(string)
+			if ok {
+				purlArchExp := regexp.MustCompile(`arch=(.*)`)
+				purlArchMatches := purlArchExp.FindStringSubmatch(purl)
+				if len(purlArchMatches) == 2 {
+					depArch = purlArchMatches[1]
+				}
+			}
+		}
+
+		// if not set, we presently need to default to amd64 because a lot of deps do not specify arch
+		//   in the future when we add the arch field to our deps, then we can remove this because empty should then mean noarch
+		if depArch == "" {
+			depArch = "amd64"
+		}
+
+		if depID == b.ID && depArch == b.Arch {
 			depVersionUnwrapped, found := dep["version"]
 			if !found {
 				continue
@@ -152,6 +174,7 @@ func (b BuildModuleDependency) Update(options ...Option) {
 			if !ok {
 				continue
 			}
+
 			if versionExp.MatchString(depVersion) {
 				dep["version"] = b.Version
 				dep["uri"] = b.URI

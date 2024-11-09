@@ -39,6 +39,10 @@ func DependencyUpdateBuildModuleCommand() *cobra.Command {
 				log.Fatal("id must be set")
 			}
 
+			if b.Arch == "" {
+				b.Arch = "amd64"
+			}
+
 			if b.SHA256 == "" {
 				log.Fatal("sha256 must be set")
 			}
@@ -77,6 +81,7 @@ func DependencyUpdateBuildModuleCommand() *cobra.Command {
 
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.BuildModulePath, "buildmodule-toml", "", "path to buildpack.toml or extension.toml")
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.ID, "id", "", "the id of the dependency")
+	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.Arch, "arch", "", "the arch of the dependency")
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.SHA256, "sha256", "", "the new sha256 of the dependency")
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.URI, "uri", "", "the new uri of the dependency")
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.Version, "version", "", "the new version of the dependency")
