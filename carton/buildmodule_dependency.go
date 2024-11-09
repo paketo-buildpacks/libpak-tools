@@ -26,6 +26,8 @@ import (
 
 	"github.com/paketo-buildpacks/libpak/v2/log"
 	"github.com/paketo-buildpacks/libpak/v2/utils"
+
+	"github.com/paketo-buildpacks/libpak-tools/internal"
 )
 
 const (
@@ -47,6 +49,7 @@ type BuildModuleDependency struct {
 	PURLPattern     string
 	Source          string
 	SourceSHA256    string
+	EolID           string
 }
 
 func (b BuildModuleDependency) Update(options ...Option) {
@@ -68,6 +71,7 @@ func (b BuildModuleDependency) Update(options ...Option) {
 	logger.Headerf("SHA256:       %s", b.SHA256)
 	logger.Headerf("Source:       %s", b.Source)
 	logger.Headerf("SourceSHA256: %s", b.SourceSHA256)
+	logger.Headerf("EOL ID:       %s", b.EolID)
 
 	versionExp, err := regexp.Compile(b.VersionPattern)
 	if err != nil {
@@ -206,6 +210,18 @@ func (b BuildModuleDependency) Update(options ...Option) {
 
 							cpes[i] = cpeExp.ReplaceAllString(cpe, b.CPE)
 						}
+					}
+				}
+
+				if b.EolID != "" {
+					eolDate, err := internal.GetEolDate(b.EolID, b.Version)
+					if err != nil {
+						config.exitHandler.Error(fmt.Errorf("unable to fetch deprecation_date"))
+						return
+					}
+
+					if eolDate != "" {
+						dep["deprecation_date"] = eolDate
 					}
 				}
 			}

@@ -92,6 +92,7 @@ func DependencyUpdateBuildModuleCommand() *cobra.Command {
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.CPEPattern, "cpe-pattern", "", "the cpe version pattern of the dependency, if not set defaults to version-pattern")
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.Source, "source", "", "the new uri of the dependency source")
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.SourceSHA256, "source-sha256", "", "the new sha256 of the dependency source")
+	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.EolID, "eol-id", "", "id of the dependency for looking up the EOL date on the https://endoflife.date/")
 
 	return dependencyUpdateBuildModuleCmd
 }
