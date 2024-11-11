@@ -39,6 +39,10 @@ func DependencyUpdateBuildModuleCommand() *cobra.Command {
 				log.Fatal("id must be set")
 			}
 
+			if b.Arch == "" {
+				b.Arch = "amd64"
+			}
+
 			if b.SHA256 == "" {
 				log.Fatal("sha256 must be set")
 			}
@@ -77,6 +81,7 @@ func DependencyUpdateBuildModuleCommand() *cobra.Command {
 
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.BuildModulePath, "buildmodule-toml", "", "path to buildpack.toml or extension.toml")
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.ID, "id", "", "the id of the dependency")
+	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.Arch, "arch", "", "the arch of the dependency")
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.SHA256, "sha256", "", "the new sha256 of the dependency")
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.URI, "uri", "", "the new uri of the dependency")
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.Version, "version", "", "the new version of the dependency")
@@ -85,6 +90,9 @@ func DependencyUpdateBuildModuleCommand() *cobra.Command {
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.PURLPattern, "purl-pattern", "", "the purl version pattern of the dependency, if not set defaults to version-pattern")
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.CPE, "cpe", "", "the new version use in all CPEs, if not set defaults to version")
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.CPEPattern, "cpe-pattern", "", "the cpe version pattern of the dependency, if not set defaults to version-pattern")
+	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.Source, "source", "", "the new uri of the dependency source")
+	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.SourceSHA256, "source-sha256", "", "the new sha256 of the dependency source")
+	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.EolID, "eol-id", "", "id of the dependency for looking up the EOL date on the https://endoflife.date/")
 
 	return dependencyUpdateBuildModuleCmd
 }

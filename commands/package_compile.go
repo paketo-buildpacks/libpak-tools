@@ -48,6 +48,7 @@ func PackageCompileCommand() *cobra.Command {
 	packageCreateCommand.Flags().BoolVar(&p.StrictDependencyFilters, "strict-filters", false, "require filter to match all data or just some data (default: false)")
 	packageCreateCommand.Flags().StringVar(&p.Source, "source", defaultSource(), "path to build package source directory (default: $PWD)")
 	packageCreateCommand.Flags().StringVar(&p.Version, "version", "", "version to substitute into buildpack.toml/extension.toml")
+	packageCreateCommand.Flags().StringVar(&p.TargetArch, "target-arch", carton.DefaultTargetArch, "target architecture for the package (default: all)")
 
 	return packageCreateCommand
 }

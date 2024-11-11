@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 	"text/template"
 
 	"github.com/BurntSushi/toml"
@@ -33,6 +34,8 @@ import (
 	"github.com/paketo-buildpacks/libpak/v2/log"
 	"github.com/paketo-buildpacks/libpak/v2/utils"
 )
+
+const DefaultTargetArch = "all"
 
 // Package is an object that contains the configuration for building a package.
 type Package struct {
@@ -57,6 +60,9 @@ type Package struct {
 
 	// Version is a version to substitute into an existing buildpack.toml.
 	Version string
+
+	// TargetArch is the target architecture to package. Default is "all".
+	TargetArch string
 }
 
 // Create creates a package.
@@ -133,10 +139,38 @@ func (p Package) Create(options ...Option) {
 		return
 	}
 
+	logger.Debugf("IncludeFiles: %+v", metadata.IncludeFiles)
+
+	supportedTargets := []string{}
+	for _, i := range metadata.IncludeFiles {
+		if strings.HasPrefix(i, "linux/") {
+			parts := strings.SplitN(i, "/", 3)
+			if len(parts) < 3 {
+				// this shouldn't happen, but if it does for some reason just ignore it
+				//   this entry is not a properly formatted target
+				continue
+			}
+			supportedTargets = append(supportedTargets, fmt.Sprintf("%s/%s", parts[0], parts[1]))
+		}
+	}
+
+	oldOutputFormat := len(supportedTargets) == 0
+	if oldOutputFormat {
+		logger.Body("No supported targets found, defaulting to old format")
+	}
+
+	logger.Debugf("Supported targets: %+v", supportedTargets)
+
 	entries := map[string]string{}
 
 	for _, i := range metadata.IncludeFiles {
-		entries[i] = filepath.Join(p.Source, i)
+		if oldOutputFormat || strings.HasPrefix(i, "linux/") || i == "buildpack.toml" {
+			entries[i] = filepath.Join(p.Source, i)
+		} else {
+			for _, target := range supportedTargets {
+				entries[fmt.Sprintf("%s/%s", target, i)] = filepath.Join(p.Source, i)
+			}
+		}
 	}
 	logger.Debugf("Include files: %+v", entries)
 
@@ -228,7 +262,8 @@ func (p Package) Create(options ...Option) {
 
 			f, err := cache.Artifact(dep, n.BasicAuth)
 			if err != nil {
-				config.exitHandler.Error(fmt.Errorf("unable to download %s\n%w", dep.URI, err))
+				logger.Debugf("fetching dependency %s failed\n%w", dep.Name, err)
+				config.exitHandler.Error(fmt.Errorf("unable to download %s. see DEBUG log level", dep.Name))
 				return
 			}
 			if err = f.Close(); err != nil {
@@ -247,8 +282,18 @@ func (p Package) Create(options ...Option) {
 	}
 	sort.Strings(files)
 	for _, d := range files {
-		logger.Bodyf("Adding %s", d)
-		file = filepath.Join(p.Destination, d)
+		if p.TargetArch != DefaultTargetArch && !oldOutputFormat && strings.HasPrefix(d, "linux/") && !strings.HasPrefix(d, fmt.Sprintf("linux/%s", p.TargetArch)) {
+			logger.Debugf("Skipping %s because target arch is %s", d, p.TargetArch)
+			continue
+		}
+
+		targetLocation := d
+		if p.TargetArch != DefaultTargetArch {
+			targetLocation = strings.Replace(d, fmt.Sprintf("linux/%s/", p.TargetArch), "", 1)
+		}
+
+		logger.Bodyf("Adding %s", targetLocation)
+		file = filepath.Join(p.Destination, targetLocation)
 		if err = config.entryWriter.Write(entries[d], file); err != nil {
 			config.exitHandler.Error(fmt.Errorf("unable to write file %s to %s\n%w", entries[d], file, err))
 			return

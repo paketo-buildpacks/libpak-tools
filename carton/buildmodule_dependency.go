@@ -26,6 +26,8 @@ import (
 
 	"github.com/paketo-buildpacks/libpak/v2/log"
 	"github.com/paketo-buildpacks/libpak/v2/utils"
+
+	"github.com/paketo-buildpacks/libpak-tools/internal"
 )
 
 const (
@@ -36,6 +38,7 @@ const (
 type BuildModuleDependency struct {
 	BuildModulePath string
 	ID              string
+	Arch            string
 	SHA256          string
 	URI             string
 	Version         string
@@ -44,6 +47,9 @@ type BuildModuleDependency struct {
 	CPEPattern      string
 	PURL            string
 	PURLPattern     string
+	Source          string
+	SourceSHA256    string
+	EolID           string
 }
 
 func (b BuildModuleDependency) Update(options ...Option) {
@@ -57,11 +63,15 @@ func (b BuildModuleDependency) Update(options ...Option) {
 
 	logger := log.NewPaketoLogger(os.Stdout)
 	_, _ = fmt.Fprintf(logger.TitleWriter(), "\n%s\n", log.FormatIdentity(b.ID, b.VersionPattern))
-	logger.Headerf("Version: %s", b.Version)
-	logger.Headerf("PURL:    %s", b.PURL)
-	logger.Headerf("CPEs:    %s", b.CPE)
-	logger.Headerf("URI:     %s", b.URI)
-	logger.Headerf("SHA256:  %s", b.SHA256)
+	logger.Headerf("Arch:         %s", b.Arch)
+	logger.Headerf("Version:      %s", b.Version)
+	logger.Headerf("PURL:         %s", b.PURL)
+	logger.Headerf("CPEs:         %s", b.CPE)
+	logger.Headerf("URI:          %s", b.URI)
+	logger.Headerf("SHA256:       %s", b.SHA256)
+	logger.Headerf("Source:       %s", b.Source)
+	logger.Headerf("SourceSHA256: %s", b.SourceSHA256)
+	logger.Headerf("EOL ID:       %s", b.EolID)
 
 	versionExp, err := regexp.Compile(b.VersionPattern)
 	if err != nil {
@@ -138,7 +148,27 @@ func (b BuildModuleDependency) Update(options ...Option) {
 			continue
 		}
 
-		if depID == b.ID {
+		// extract the arch from the PURL, it's the only place it lives consistently at the moment
+		var depArch string
+		purlUnwrapped, found := dep["purl"]
+		if found {
+			purl, ok := purlUnwrapped.(string)
+			if ok {
+				purlArchExp := regexp.MustCompile(`arch=(.*)`)
+				purlArchMatches := purlArchExp.FindStringSubmatch(purl)
+				if len(purlArchMatches) == 2 {
+					depArch = purlArchMatches[1]
+				}
+			}
+		}
+
+		// if not set, we presently need to default to amd64 because a lot of deps do not specify arch
+		//   in the future when we add the arch field to our deps, then we can remove this because empty should then mean noarch
+		if depArch == "" {
+			depArch = "amd64"
+		}
+
+		if depID == b.ID && depArch == b.Arch {
 			depVersionUnwrapped, found := dep["version"]
 			if !found {
 				continue
@@ -148,10 +178,17 @@ func (b BuildModuleDependency) Update(options ...Option) {
 			if !ok {
 				continue
 			}
+
 			if versionExp.MatchString(depVersion) {
 				dep["version"] = b.Version
 				dep["uri"] = b.URI
 				dep["sha256"] = b.SHA256
+				if b.SourceSHA256 != "" {
+					dep["source-sha256"] = b.SourceSHA256
+				}
+				if b.Source != "" {
+					dep["source"] = b.Source
+				}
 
 				purlUnwrapped, found := dep["purl"]
 				if found {
@@ -173,6 +210,18 @@ func (b BuildModuleDependency) Update(options ...Option) {
 
 							cpes[i] = cpeExp.ReplaceAllString(cpe, b.CPE)
 						}
+					}
+				}
+
+				if b.EolID != "" {
+					eolDate, err := internal.GetEolDate(b.EolID, b.Version)
+					if err != nil {
+						config.exitHandler.Error(fmt.Errorf("unable to fetch deprecation_date"))
+						return
+					}
+
+					if eolDate != "" {
+						dep["deprecation_date"] = eolDate
 					}
 				}
 			}
