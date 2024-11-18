@@ -27,6 +27,7 @@ import (
 
 	"github.com/buildpacks/libcnb/v2"
 	"github.com/paketo-buildpacks/libpak/v2/effect"
+	"github.com/paketo-buildpacks/libpak/v2/sherpa"
 
 	"github.com/paketo-buildpacks/libpak-tools/carton"
 )
@@ -167,7 +168,7 @@ func (p *BundleBuildpack) CleanUpDockerImages() error {
 			Stderr: io.Discard,
 		})
 		if err != nil {
-			return fmt.Errorf("unable to execute `docker image rm` command\n%w", err)
+			return fmt.Errorf("unable to execute `docker image rm` command on images %v\n%w", imagesToClean, err)
 		}
 	}
 
@@ -175,7 +176,7 @@ func (p *BundleBuildpack) CleanUpDockerImages() error {
 }
 
 // ExecutePackage runs the package buildpack command
-func (p *BundleBuildpack) ExecutePackage(tmpDir string) error {
+func (p *BundleBuildpack) ExecutePackage(workingDirectory string, additionalArgs ...string) error {
 	pullPolicy, found := os.LookupEnv("BP_PULL_POLICY")
 	if !found {
 		pullPolicy = "if-not-present"
@@ -199,12 +200,13 @@ func (p *BundleBuildpack) ExecutePackage(tmpDir string) error {
 		args = append(args, "--target", archFromSystem())
 	}
 
+	args = append(args, additionalArgs...)
 	err := p.executor.Execute(effect.Execution{
 		Command: "pack",
 		Args:    args,
 		Stdout:  os.Stdout,
 		Stderr:  os.Stderr,
-		Dir:     tmpDir,
+		Dir:     workingDirectory,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to execute `pack buildpack package` command\n%w", err)
@@ -214,7 +216,7 @@ func (p *BundleBuildpack) ExecutePackage(tmpDir string) error {
 }
 
 // CompilePackage compiles the buildpack's Go code
-func (p *BundleBuildpack) CompilePackage(tmpDir string) {
+func (p *BundleBuildpack) CompilePackage(destDir string) {
 	pkg := carton.Package{}
 	pkg.Source = p.BuildpackPath
 	pkg.Version = p.BuildpackVersion
@@ -222,7 +224,7 @@ func (p *BundleBuildpack) CompilePackage(tmpDir string) {
 	pkg.DependencyFilters = p.DependencyFilters
 	pkg.StrictDependencyFilters = p.StrictDependencyFilters
 	pkg.IncludeDependencies = p.IncludeDependencies
-	pkg.Destination = tmpDir
+	pkg.Destination = destDir
 
 	options := []carton.Option{
 		carton.WithExecutor(p.executor),
@@ -233,22 +235,79 @@ func (p *BundleBuildpack) CompilePackage(tmpDir string) {
 	pkg.Create(options...)
 }
 
+func (p *BundleBuildpack) CompileAndBundleComponent(buildDirectory string) error {
+	// Compile the buildpack
+	fmt.Println("➜ Compile Buildpack")
+	p.CompilePackage(buildDirectory)
+
+	// package the buildpack
+	fmt.Printf("➜ Package Buildpack: %s\n", p.BuildpackID)
+	return p.ExecutePackage(buildDirectory)
+}
+
+func (p *BundleBuildpack) BundleComposite(buildDirectory string) error {
+	// Make a modified package.toml in the temp directory
+	packageTomlPath, err := copyPackageTomlAndAddURI(p.BuildpackPath, buildDirectory)
+	if err != nil {
+		return fmt.Errorf("unable to copy package.toml and add URI\n%w", err)
+	}
+
+	// prepare extra arguments
+	args := []string{
+		"--config", packageTomlPath,
+	}
+
+	if !sherpa.ResolveBool("BP_FLATTEN_DISABLED") {
+		args = append(args, "--flatten")
+	}
+
+	// we still package from the buildpack directory though, only the package.toml is in the temp directory
+	fmt.Printf("➜ Package Buildpack: %s\n", p.BuildpackID)
+	return p.ExecutePackage(p.BuildpackPath, args...)
+}
+
+func copyPackageTomlAndAddURI(buildpackPath, destDir string) (string, error) {
+	inputPackageToml, err := os.Open(filepath.Join(buildpackPath, "package.toml"))
+	if err != nil {
+		return "", fmt.Errorf("unable to open package.toml\n%w", err)
+	}
+	defer inputPackageToml.Close()
+
+	outputPackageTomlPath := filepath.Join(destDir, "package.toml")
+	outputPackageToml, err := os.Create(outputPackageTomlPath)
+	if err != nil {
+		return "", fmt.Errorf("unable to create package.toml\n%w", err)
+	}
+	defer outputPackageToml.Close()
+
+	_, err = outputPackageToml.WriteString(fmt.Sprintf("[buildpack]\nuri = \"%s\"\n\n", buildpackPath))
+	if err != nil {
+		return "", fmt.Errorf("unable to write uri\n%w", err)
+	}
+
+	_, err = io.Copy(outputPackageToml, inputPackageToml)
+	if err != nil {
+		return "", fmt.Errorf("unable to copy rest of package.toml\n%w", err)
+	}
+
+	return outputPackageTomlPath, nil
+}
+
 // Execute runs the package buildpack command
 func (p *BundleBuildpack) Execute() error {
-	tmpDir, err := os.MkdirTemp("", "BundleBuildpack")
+	buildDirectory, err := os.MkdirTemp("", "BundleBuildpack")
 	if err != nil {
 		return fmt.Errorf("unable to create temporary directory\n%w", err)
 	}
 
-	// Compile the buildpack
-	fmt.Println("➜ Compile Buildpack")
-	p.CompilePackage(tmpDir)
-
-	// package the buildpack
-	fmt.Printf("➜ Package Buildpack: %s\n", p.BuildpackID)
-	err = p.ExecutePackage(tmpDir)
-	if err != nil {
-		return fmt.Errorf("unable to package the buildpack\n%w", err)
+	// we use existence of main.go to determine if we are packaging a component or composite buildpack
+	mainCmdPath := filepath.Join(p.BuildpackPath, "cmd/main/main.go")
+	if componentBp, err := sherpa.FileExists(mainCmdPath); err != nil {
+		return fmt.Errorf("unable to check if file exists\n%w", err)
+	} else if componentBp {
+		p.CompileAndBundleComponent(buildDirectory)
+	} else {
+		p.BundleComposite(buildDirectory)
 	}
 
 	// clean up
