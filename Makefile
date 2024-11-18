@@ -3,7 +3,7 @@ GOCMD?=go
 GO_VERSION=$(shell go list -m -f "{{.GoVersion}}")
 LIBPAKTOOLS_VERSION=$(shell ./scripts/version.sh)
 PACKAGE_BASE=github.com/paketo-buildpacks/libpak-tools
-OUTDIR=./binaries
+OUTDIR=$(HOME)/go/bin
 LDFLAGS="-s -w"
 
 all: test libpak-tools
@@ -14,13 +14,6 @@ out:
 libpak-tools: out
 	@echo "> Building libpak-tools..."
 	go build -ldflags=$(LDFLAGS) -o $(OUTDIR)/libpak-tools main.go
-
-package: OUTDIR=./bin
-package: clean libpak-tools
-	@echo "> Packaging up binaries..."
-	mkdir -p dist/
-	tar czf dist/libpak-tools-$(LIBPAKTOOLS_VERSION).tgz $(OUTDIR)/*
-	rm -rf ./bin
 
 install-goimports:
 	@echo "> Installing goimports..."

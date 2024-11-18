@@ -2,6 +2,15 @@
 
 This repository pulls together and publishes a number of helpful tools for the management and release of buildpacks.
 
+## Configuration Environment Variables
+
+| Name                  | Default                                    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| --------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `BP_ROOT`             | ``                                         | The location where you have `git clone`'d all of the buildpacks. The structure should be `$BP_ROOT/<github_org>/<github_repo>`. For example: `$BP_ROOT/paketo-buildpacks/bellsoft-liberica`. This setting is required *if* you want the tool to infer where your buildpacks live based on the `--buildpack-id` you supply. If you do not include it, then you need to include the `--buildpack-path` argument to indicate the specific location of the buildpack to use. |
+| `BP_ARCH`             | `runtime.GOARCH` (i.e. your system's arch) | This does not generally need to be set, but you can use it to override the automatically detected architecture. This might be helpful if you're on M-series Mac hardware and can build for multiple architectures.                                                                                                                                                                                                                                                       |
+| `BP_PULL_POLICY`      | `if-not-present`                           | This will allow you to override the pull policy. The tool specifically sets pull policy, and does not default to pack's default.                                                                                                                                                                                                                                                                                                                                         |
+| `BP_FLATTEN_DISABLED` | `false`                                    | This will disable flattening of composite buildpacks. By default, the tool will flatten composite buildpacks which takes all of the component buildpacks in that composite buildpack and puts them into one layer, instead of many layers.                                                                                                                                                                                                                               |
+
 ## `libpak-tools package compile`
 
 The `package compile` command creates a `libpak.Package` and calls `libpak.Package.Create()`. This takes a Paketo buildpack written in Go and packages is it into a buildpack. That involves compiling the source code, possibly copying in additional resource files, and generating the buildpack in the given output directory. The key is that the output of this command is a *directory*. If you want it to output an image, use `libpak-tools package bundle`.
@@ -29,8 +38,7 @@ Flags:
 The `package bundle` does the same thing as `libpak-tools package compile` but then runs `pack buildpack package` as well, so the output is a buildpack image.
 
 ```
-> libpak-tools package bundle -h
-Compile and package a single buildpack
+Compile and package a single buildpack (component & composite)
 
 Usage:
   libpak-tools package bundle [flags]
@@ -42,6 +50,8 @@ Flags:
       --dependency-filter stringArray   one or more filters that are applied to exclude dependencies
   -h, --help                            help for bundle
       --include-dependencies            whether to include dependencies (default: false)
+      --publish                         publish the buildpack to a buildpack registry (default: false)
+      --registry-name string            prefix for the registry to publish to (default: your buildpack id)
       --strict-filters                  require filter to match all data or just some data (default: false)
       --version string                  version to substitute into buildpack.toml/extension.toml
 ```

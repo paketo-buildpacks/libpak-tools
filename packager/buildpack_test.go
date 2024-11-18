@@ -18,6 +18,7 @@ package packager_test
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	exMocks "github.com/buildpacks/libcnb/v2/mocks"
@@ -34,6 +35,10 @@ func testBuildpack(t *testing.T, context spec.G, it spec.S) {
 	var (
 		Expect = NewWithT(t).Expect
 	)
+
+	it.Before(func() {
+		t.Setenv("BP_ARCH", "amd64")
+	})
 
 	context("Infer Buildpack Path", func() {
 		context("BP_ROOT is not set", func() {
@@ -246,8 +251,6 @@ func testBuildpack(t *testing.T, context spec.G, it spec.S) {
 
 		it.Before(func() {
 			mockExecutor = &mocks.Executor{}
-
-			t.Setenv("BP_ARCH", "amd64")
 		})
 
 		it("defaults pull policy to if-not-present", func() {
@@ -313,6 +316,26 @@ func testBuildpack(t *testing.T, context spec.G, it spec.S) {
 				Expect(p.ExecutePackage("/some/path")).To(Succeed())
 			})
 		})
+
+		it("includes additional args", func() {
+			mockExecutor.On("Execute", mock.MatchedBy(func(e effect.Execution) bool {
+				return e.Command == "pack" &&
+					e.Args[0] == "buildpack" &&
+					e.Args[1] == "package" &&
+					e.Args[2] == "some-id" &&
+					e.Args[3] == "--pull-policy" &&
+					e.Args[4] == "if-not-present" &&
+					e.Args[5] == "--target" &&
+					e.Args[6] == "linux/amd64" &&
+					e.Args[7] == "--some-more-args" &&
+					e.Dir == "/some/path"
+			})).Return(nil)
+
+			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
+			p.BuildpackID = "some-id"
+
+			Expect(p.ExecutePackage("/some/path", "--some-more-args")).To(Succeed())
+		})
 	})
 
 	context("CompilePackage", func() {
@@ -345,6 +368,54 @@ func testBuildpack(t *testing.T, context spec.G, it spec.S) {
 			p.BuildpackID = "some-id"
 
 			Expect(p.ExecutePackage("/some/path")).To(Succeed())
+		})
+	})
+
+	context("Bundles a Composite", func() {
+		var (
+			buildpackPath string
+			buildPath     string
+			mockExecutor  *mocks.Executor
+		)
+
+		it.Before(func() {
+			buildpackPath = t.TempDir()
+			buildPath = t.TempDir()
+			mockExecutor = &mocks.Executor{}
+
+			Expect(os.WriteFile(filepath.Join(buildpackPath, "package.toml"), []byte("some-toml"), 0600)).To(Succeed())
+		})
+
+		it("inserts the URI to package.toml and runs pack buildpack package", func() {
+			mockExecutor.On("Execute", mock.MatchedBy(func(e effect.Execution) bool {
+				Expect(e.Command).To(Equal("pack"))
+				Expect(e.Args).To(HaveExactElements([]string{
+					"buildpack",
+					"package",
+					"some-id",
+					"--pull-policy",
+					"if-not-present",
+					"--target",
+					"linux/amd64",
+					"--config",
+					filepath.Join(buildPath, "/package.toml"),
+					"--flatten",
+				}))
+				Expect(e.Dir).To(Equal(buildpackPath))
+				return true
+			})).Return(nil)
+
+			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
+			p.BuildpackID = "some-id"
+			p.BuildpackPath = buildpackPath
+
+			Expect(p.BundleComposite(buildPath)).To(Succeed())
+
+			packageToml := filepath.Join(buildPath, "package.toml")
+			Expect(packageToml).To(BeARegularFile())
+			contents, err := os.ReadFile(packageToml)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(contents)).To(HavePrefix(fmt.Sprintf("[buildpack]\nuri = \"%s\"\n\n", buildpackPath)))
 		})
 	})
 }

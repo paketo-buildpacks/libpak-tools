@@ -29,7 +29,7 @@ func PackageBundleCommand() *cobra.Command {
 
 	var packageBuildpackCmd = &cobra.Command{
 		Use:   "bundle",
-		Short: "Compile and package a single buildpack",
+		Short: "Compile and package a single buildpack (component & composite)",
 		Run: func(cmd *cobra.Command, args []string) {
 			if p.BuildpackID == "" && p.BuildpackPath == "" {
 				log.Fatal("buildpack-id or buildpack-path must be set")
@@ -40,11 +40,15 @@ func PackageBundleCommand() *cobra.Command {
 			}
 
 			if p.BuildpackID != "" && p.BuildpackPath == "" {
-				p.InferBuildpackPath()
+				if err := p.InferBuildpackPath(); err != nil {
+					log.Fatal(err)
+				}
 			}
 
 			if p.BuildpackVersion == "" {
-				p.InferBuildpackVersion()
+				if err := p.InferBuildpackVersion(); err != nil {
+					log.Fatal(err)
+				}
 			}
 
 			if p.RegistryName == "" {
