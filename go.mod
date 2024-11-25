@@ -5,7 +5,7 @@ go 1.23
 require (
 	github.com/paketo-buildpacks/libpak/v2 v2.0.0-alpha.3.0.20241030145014-4e3b6fe37213
 	github.com/spf13/cobra v1.8.1
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 )
 
 require (
@@ -23,7 +23,7 @@ require (
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/BurntSushi/toml v1.4.0
 	github.com/Masterminds/semver v1.5.0 // indirect
-	github.com/Masterminds/semver/v3 v3.3.0
+	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/buildpacks/libcnb/v2 v2.0.0
 	github.com/creack/pty v1.1.24 // indirect
 	github.com/heroku/color v0.0.6
