@@ -25,5 +25,6 @@ import (
 func TestUnit(t *testing.T) {
 	suite := spec.New("libpak-tools/internal", spec.Report(report.Terminal{}))
 	suite("EOL", testGetEolDate)
+	suite("TOML", testTOML)
 	suite.Run(t)
 }
