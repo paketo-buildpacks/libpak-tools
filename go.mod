@@ -1,8 +1,6 @@
 module github.com/paketo-buildpacks/libpak-tools
 
-go 1.23.0
-
-toolchain go1.23.7
+go 1.24
 
 require (
 	github.com/paketo-buildpacks/libpak/v2 v2.0.0-alpha.4
@@ -23,7 +21,7 @@ require (
 
 require (
 	dario.cat/mergo v1.0.1 // indirect
-	github.com/BurntSushi/toml v1.4.0
+	github.com/BurntSushi/toml v1.5.0
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/buildpacks/libcnb/v2 v2.0.0
@@ -34,7 +32,7 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
-	github.com/onsi/gomega v1.36.2
+	github.com/onsi/gomega v1.36.3
 	github.com/sclevine/spec v1.4.0
 	github.com/spf13/pflag v1.0.6 // indirect
 	golang.org/x/sys v0.31.0 // indirect
