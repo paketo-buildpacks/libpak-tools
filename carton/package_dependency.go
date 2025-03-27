@@ -17,15 +17,14 @@
 package carton
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"strings"
 
-	"github.com/BurntSushi/toml"
-
 	"github.com/paketo-buildpacks/libpak/v2/log"
 	"github.com/paketo-buildpacks/libpak/v2/utils"
+
+	"github.com/paketo-buildpacks/libpak-tools/internal"
 )
 
 type PackageDependency struct {
@@ -49,20 +48,20 @@ func (p PackageDependency) Update(options ...Option) {
 	_, _ = fmt.Fprintf(logger.TitleWriter(), "\n%s\n", log.FormatIdentity(p.ID, p.Version))
 
 	if p.BuilderPath != "" {
-		if err := updateFile(p.BuilderPath, updateByKey("buildpacks", p.ID, p.Version)); err != nil {
+		if err := internal.UpdateTOMLFile(p.BuilderPath, updateByKey("buildpacks", p.ID, p.Version)); err != nil {
 			config.exitHandler.Error(fmt.Errorf("unable to update %s\n%w", p.BuilderPath, err))
 		}
 	}
 
 	if p.PackagePath != "" {
-		if err := updateFile(p.PackagePath, updateByKey("dependencies", p.ID, p.Version)); err != nil {
+		if err := internal.UpdateTOMLFile(p.PackagePath, updateByKey("dependencies", p.ID, p.Version)); err != nil {
 			config.exitHandler.Error(fmt.Errorf("unable to update %s\n%w", p.PackagePath, err))
 		}
 	}
 
 	// Do we have a buildpack.toml with an order element? (composite buildpack)
 	if p.BuildpackPath != "" {
-		if err := updateFile(p.BuildpackPath, func(md map[string]interface{}) {
+		if err := internal.UpdateTOMLFile(p.BuildpackPath, func(md map[string]interface{}) {
 			parts := strings.Split(p.ID, "/")
 			id := strings.Join(parts[len(parts)-2:], "/")
 
@@ -148,43 +147,4 @@ func updateByKey(key, id, version string) func(md map[string]interface{}) {
 			}
 		}
 	}
-}
-
-func updateFile(cfgPath string, f func(md map[string]interface{})) error {
-	c, err := os.ReadFile(cfgPath)
-	if err != nil {
-		return fmt.Errorf("unable to read %s\n%w", cfgPath, err)
-	}
-
-	// save any leading comments, this is to preserve license headers
-	// inline comments will be lost
-	comments := []byte{}
-	for i, line := range bytes.SplitAfter(c, []byte("\n")) {
-		if bytes.HasPrefix(line, []byte("#")) || (i > 0 && len(bytes.TrimSpace(line)) == 0) {
-			comments = append(comments, line...)
-		} else {
-			break // stop on first comment
-		}
-	}
-
-	md := make(map[string]interface{})
-	if err := toml.Unmarshal(c, &md); err != nil {
-		return fmt.Errorf("unable to decode md %s\n%w", cfgPath, err)
-	}
-
-	f(md)
-
-	b, err := utils.Marshal(md)
-	if err != nil {
-		return fmt.Errorf("unable to encode md %s\n%w", cfgPath, err)
-	}
-
-	b = append(comments, b...)
-
-	// #nosec G306 - permissions need to be 644 on the package
-	if err := os.WriteFile(cfgPath, b, 0644); err != nil {
-		return fmt.Errorf("unable to write %s\n%w", cfgPath, err)
-	}
-
-	return nil
 }

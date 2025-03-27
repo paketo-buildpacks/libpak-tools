@@ -224,7 +224,7 @@ func testBuildpack(t *testing.T, context spec.G, it spec.S) {
 					e.Args[4] == "--filter" &&
 					e.Args[5] == "dangling=true"
 			})).Return(func(ex effect.Execution) error {
-				_, err := ex.Stdout.Write([]byte("foo\nbar\nbaz\n"))
+				_, err := ex.Stdout.Write([]byte("sha256:31699bb7e3abe178dd1b3a494c64fc5efbf8488cb635253d25baaf6038e24b54\r\nsha256:4e916e5e31f3ac0d84c436ae60a8fa7c670b05051532f36193cd5fe504e2aee6\r\n"))
 				Expect(err).ToNot(HaveOccurred())
 				return nil
 			})
@@ -234,9 +234,8 @@ func testBuildpack(t *testing.T, context spec.G, it spec.S) {
 					e.Args[0] == "image" &&
 					e.Args[1] == "rm" &&
 					e.Args[2] == "-f" &&
-					e.Args[3] == "foo" &&
-					e.Args[4] == "bar" &&
-					e.Args[5] == "baz"
+					e.Args[3] == "sha256:31699bb7e3abe178dd1b3a494c64fc5efbf8488cb635253d25baaf6038e24b54" &&
+					e.Args[4] == "sha256:4e916e5e31f3ac0d84c436ae60a8fa7c670b05051532f36193cd5fe504e2aee6"
 			})).Return(nil)
 
 			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
