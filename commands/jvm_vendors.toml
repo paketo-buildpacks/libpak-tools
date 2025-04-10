@@ -1,0 +1,59 @@
+[[vendors]]
+description = "A Cloud Native Buildpack that provides the Adoptium implementations of JREs and JDKs"
+homepage = "https://github.com/paketo-buildpacks/adoptium"
+id = "paketo-buildpacks/adoptium"
+name = "Paketo Buildpack for Adoptium"
+
+[[vendors]]
+description = "A Cloud Native Buildpack that provides the Alibaba Dragonwell implementations of JREs and JDKs"
+homepage = "https://github.com/paketo-buildpacks/alibaba-dragonwell"
+id = "paketo-buildpacks/alibaba-dragonwell"
+name = "Paketo Buildpack for Alibaba Dragonwell"
+
+[[vendors]]
+description = "A Cloud Native Buildpack that provides the Amazon Corretto implementations of JREs and JDKs"
+homepage = "https://github.com/paketo-buildpacks/amazon-corretto"
+id = "paketo-buildpacks/amazon-corretto"
+name = "Paketo Buildpack for Amazon Corretto"
+
+[[vendors]]
+description = "A Cloud Native Buildpack that provides the Azul Zulu implementations of JREs and JDKs"
+homepage = "https://github.com/paketo-buildpacks/azul-zulu"
+id = "paketo-buildpacks/azul-zulu"
+name = "Paketo Buildpack for Azul Zulu"
+
+[[vendors]]
+description = "A Cloud Native Buildpack that provides the Bellsoft Liberica implementations of JREs and JDKs"
+homepage = "https://github.com/paketo-buildpacks/bellsoft-liberica"
+id = "paketo-buildpacks/bellsoft-liberica"
+name = "Paketo Buildpack for BellSoft Liberica"
+
+[[vendors]]
+description = "A Cloud Native Buildpack that provides the Eclipse OpenJ9 implementations of JREs and JDKs"
+homepage = "https://github.com/paketo-buildpacks/eclipse-openj9"
+id = "paketo-buildpacks/eclipse-openj9"
+name = "Paketo Buildpack for Eclipse OpenJ9"
+
+[[vendors]]
+description = "A Cloud Native Buildpack that provides the GraalVM implementations of JREs, JDKs and Native Image tools"
+homepage = "https://github.com/paketo-buildpacks/graalvm"
+id = "paketo-buildpacks/graalvm"
+name = "Paketo Buildpack for GraalVM"
+
+[[vendors]]
+description = "A Cloud Native Buildpack that provides the Oracle implementations of JREs, JDKs, and Native Image"
+homepage = "https://github.com/paketo-buildpacks/oracle"
+id = "paketo-buildpacks/oracle"
+name = "Paketo Buildpack for Oracle"
+
+[[vendors]]
+description = "A Cloud Native Buildpack that provides the Microsoft OpenJDK implementations of JREs and JDKs"
+homepage = "https://github.com/paketo-buildpacks/microsoft-openjdk"
+id = "paketo-buildpacks/microsoft-openjdk"
+name = "Paketo Buildpack for Microsoft OpenJDK"
+
+[[vendors]]
+description = "A Cloud Native Buildpack that provides the SAP Machine implementations of JREs and JDKs"
+homepage = "https://github.com/paketo-buildpacks/sap-machine"
+id = "paketo-buildpacks/sap-machine"
+name = "Paketo Buildpack for SapMachine"

@@ -4,7 +4,8 @@ GO_VERSION=$(shell go list -m -f "{{.GoVersion}}")
 LIBPAKTOOLS_VERSION=$(shell ./scripts/version.sh)
 PACKAGE_BASE=github.com/paketo-buildpacks/libpak-tools
 OUTDIR=$(HOME)/go/bin
-LDFLAGS="-s -w"
+VERSION=$(shell git describe --always --long --dirty)
+LDFLAGS="-s -w -X ${PACKAGE_BASE}/commands.version=${VERSION}"
 
 all: test libpak-tools
 
