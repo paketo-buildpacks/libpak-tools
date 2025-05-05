@@ -151,8 +151,8 @@ func (p *BundleBuildpack) CleanUpDockerImages() error {
 
 	imagesToClean := []string{}
 	for _, img := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
-		if img != "" {
-			imagesToClean = append(imagesToClean, img)
+		if strings.TrimSpace(img) != "" {
+			imagesToClean = append(imagesToClean, strings.TrimSpace(img))
 		}
 	}
 
