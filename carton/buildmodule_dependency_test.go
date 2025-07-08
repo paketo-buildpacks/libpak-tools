@@ -156,6 +156,58 @@ cpes    = ["cpe:2.3:a:test-vendor:test-product:test-version-2:patch2:*:*:*:*:*:*
 `))
 	})
 
+	it("updates dependency with purls & cpes", func() {
+		Expect(os.WriteFile(path, []byte(`api = "0.7"
+	[buildpack]
+	id = "some-buildpack"
+	name = "Some Buildpack"
+	version = "1.2.3"
+
+	[[metadata.dependencies]]
+	id      = "test-id"
+	name    = "Test Name"
+	version = "test-version-1"
+	uri     = "test-uri-1"
+	sha256  = "test-sha256-1"
+	stacks  = [ "test-stack" ]
+	purls    = ["pkg:generic/test-jre@different-version-1?arch=arm64"]
+	cpes    = ["cpe:2.3:a:test-vendor:test-product:test-version-1:patch1:*:*:*:*:*:*:*"]
+	`), 0600)).To(Succeed())
+
+		d := carton.BuildModuleDependency{
+			BuildModulePath: path,
+			ID:              "test-id",
+			Arch:            "arm64",
+			SHA256:          "test-sha256-2",
+			URI:             "test-uri-2",
+			Version:         "test-version-2",
+			VersionPattern:  `test-version-[\d]`,
+			PURL:            "different-version-2",
+			PURLPattern:     `different-version-[\d]`,
+			CPE:             "test-version-2:patch2",
+			CPEPattern:      `test-version-[\d]:patch[\d]`,
+		}
+
+		d.Update(carton.WithExitHandler(exitHandler))
+
+		Expect(os.ReadFile(path)).To(libpakTesting.MatchTOML(`api = "0.7"
+	[buildpack]
+	id = "some-buildpack"
+	name = "Some Buildpack"
+	version = "1.2.3"
+
+	[[metadata.dependencies]]
+	id      = "test-id"
+	name    = "Test Name"
+	version = "test-version-2"
+	uri     = "test-uri-2"
+	sha256  = "test-sha256-2"
+	stacks  = [ "test-stack" ]
+	purls    = ["pkg:generic/test-jre@different-version-2?arch=arm64"]
+	cpes    = ["cpe:2.3:a:test-vendor:test-product:test-version-2:patch2:*:*:*:*:*:*:*"]
+	`))
+	})
+
 	it("updates dependency with source & sourceSha", func() {
 		Expect(os.WriteFile(path, []byte(`api = "0.7"
 [buildpack]
@@ -208,6 +260,61 @@ purl          = "pkg:generic/test-jre@different-version-2?arch=amd64"
 cpes          = ["cpe:2.3:a:test-vendor:test-product:test-version-2:patch2:*:*:*:*:*:*:*"]
 source        = "test-new-source"
 source-sha256 = "test-new-source-sha"
+`))
+	})
+
+	it("updates dependency with checksum & source-checksum", func() {
+		Expect(os.WriteFile(path, []byte(`api = "0.7"
+[buildpack]
+id = "some-buildpack"
+name = "Some Buildpack"
+version = "1.2.3"
+[[metadata.dependencies]]
+id       = "test-id"
+name     = "Test Name"
+version  = "test-version-1"
+uri      = "test-uri-1"
+checksum = "sha256:test-sha256-1"
+stacks   = [ "test-stack" ]
+purls    = ["pkg:generic/test-jre@different-version-1?arch=amd64"]
+cpes     = ["cpe:2.3:a:test-vendor:test-product:test-version-1:patch1:*:*:*:*:*:*:*"]
+`), 0600)).To(Succeed())
+
+		d := carton.BuildModuleDependency{
+			BuildModulePath: path,
+			ID:              "test-id",
+			Arch:            "amd64",
+			SHA256:          "test-sha256-2",
+			URI:             "test-uri-2",
+			Version:         "test-version-2",
+			VersionPattern:  `test-version-[\d]`,
+			PURL:            "different-version-2",
+			PURLPattern:     `different-version-[\d]`,
+			CPE:             "test-version-2:patch2",
+			CPEPattern:      `test-version-[\d]:patch[\d]`,
+			Source:          "test-new-source",
+			SourceSHA256:    "test-new-source-sha",
+		}
+
+		d.Update(carton.WithExitHandler(exitHandler))
+
+		Expect(os.ReadFile(path)).To(libpakTesting.MatchTOML(`api = "0.7"
+[buildpack]
+id = "some-buildpack"
+name = "Some Buildpack"
+version = "1.2.3"
+
+[[metadata.dependencies]]
+id              = "test-id"
+name            = "Test Name"
+version         = "test-version-2"
+uri             = "test-uri-2"
+checksum        = "sha256:test-sha256-2"
+stacks          = [ "test-stack" ]
+purls           = ["pkg:generic/test-jre@different-version-2?arch=amd64"]
+cpes            = ["cpe:2.3:a:test-vendor:test-product:test-version-2:patch2:*:*:*:*:*:*:*"]
+source          = "test-new-source"
+source-checksum = "sha256:test-new-source-sha"
 `))
 	})
 
