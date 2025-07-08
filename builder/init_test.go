@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 the original author or authors.
+ * Copyright 2018-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,30 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package commands
+package builder_test
 
 import (
-	"os"
+	"testing"
 
-	"github.com/spf13/cobra"
+	"github.com/sclevine/spec"
+	"github.com/sclevine/spec/report"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "libpak-tools",
-	Short: "A set of tools for managing Paketo libpak based buildpacks",
-}
-
-func Execute() {
-	err := rootCmd.Execute()
-	if err != nil {
-		os.Exit(1)
-	}
-}
-
-func init() {
-	rootCmd.AddCommand(PackageCommand())
-	rootCmd.AddCommand(DependencyCommand())
-	rootCmd.AddCommand(BuildJvmVendorsCommand())
-	rootCmd.AddCommand(VersionCommand())
+func TestUnit(t *testing.T) {
+	suite := spec.New("libpak-tools/builder", spec.Report(report.Terminal{}))
+	suite("Builder", testBuilder)
+	suite.Run(t)
 }

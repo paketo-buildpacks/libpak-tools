@@ -271,8 +271,8 @@ func (p Package) Create(options ...Option) {
 				return
 			}
 
-			entries[fmt.Sprintf("dependencies/%s/%s", dep.SHA256, filepath.Base(f.Name()))] = f.Name()
-			entries[fmt.Sprintf("dependencies/%s.toml", dep.SHA256)] = fmt.Sprintf("%s.toml", filepath.Dir(f.Name()))
+			entries[fmt.Sprintf("dependencies/%s/%s", dep.GetChecksum(), filepath.Base(f.Name()))] = f.Name()
+			entries[fmt.Sprintf("dependencies/%s.toml", dep.GetChecksum())] = fmt.Sprintf("%s.toml", filepath.Dir(f.Name()))
 		}
 	}
 
