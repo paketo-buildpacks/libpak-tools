@@ -267,6 +267,10 @@ func (p *BundleBuildpack) BundleComposite(buildDirectory string) error {
 }
 
 func copyPackageTomlAndAddURI(buildpackPath, destDir string) (string, error) {
+	if err := sherpa.CopyFileFrom(filepath.Join(buildpackPath, "buildpack.toml"), filepath.Join(destDir, "buildpack.toml")); err != nil {
+		return "", fmt.Errorf("unable to copy buildpack.toml\n%w", err)
+	}
+
 	inputPackageToml, err := os.Open(filepath.Join(buildpackPath, "package.toml"))
 	if err != nil {
 		return "", fmt.Errorf("unable to open package.toml\n%w", err)
@@ -280,7 +284,7 @@ func copyPackageTomlAndAddURI(buildpackPath, destDir string) (string, error) {
 	}
 	defer outputPackageToml.Close()
 
-	_, err = outputPackageToml.WriteString(fmt.Sprintf("[buildpack]\nuri = \"%s\"\n\n", buildpackPath))
+	_, err = outputPackageToml.WriteString(fmt.Sprintf("[buildpack]\nuri = \"%s\"\n\n", destDir))
 	if err != nil {
 		return "", fmt.Errorf("unable to write uri\n%w", err)
 	}
