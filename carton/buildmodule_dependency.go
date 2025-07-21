@@ -33,6 +33,11 @@ import (
 const (
 	BuildModuleDependencyPattern      = `(?m)([\s]*.*id[\s]+=[\s]+"%s"\n.*\n[\s]*version[\s]+=[\s]+")%s("\n[\s]*uri[\s]+=[\s]+").*("\n[\s]*sha256[\s]+=[\s]+").*(".*)`
 	BuildModuleDependencySubstitution = "${1}%s${2}%s${3}%s${4}"
+	defaultArch                       = "amd64"
+)
+
+var (
+	purlArchExp = regexp.MustCompile(`arch=(.*)`)
 )
 
 type BuildModuleDependency struct {
@@ -149,25 +154,7 @@ func (b BuildModuleDependency) Update(options ...Option) {
 		}
 
 		// extract the arch from the PURL, it's the only place it lives consistently at the moment
-		var depArch string
-		purlUnwrapped, found := dep["purl"]
-		if found {
-			purl, ok := purlUnwrapped.(string)
-			if ok {
-				purlArchExp := regexp.MustCompile(`arch=(.*)`)
-				purlArchMatches := purlArchExp.FindStringSubmatch(purl)
-				if len(purlArchMatches) == 2 {
-					depArch = purlArchMatches[1]
-				}
-			}
-		}
-
-		// if not set, we presently need to default to amd64 because a lot of deps do not specify arch
-		//   in the future when we add the arch field to our deps, then we can remove this because empty should then mean noarch
-		if depArch == "" {
-			depArch = "amd64"
-		}
-
+		depArch := dependencyArch(dep)
 		if depID == b.ID && depArch == b.Arch {
 			depVersionUnwrapped, found := dep["version"]
 			if !found {
@@ -182,22 +169,14 @@ func (b BuildModuleDependency) Update(options ...Option) {
 			if versionExp.MatchString(depVersion) {
 				dep["version"] = b.Version
 				dep["uri"] = b.URI
-				dep["sha256"] = b.SHA256
-				if b.SourceSHA256 != "" {
-					dep["source-sha256"] = b.SourceSHA256
-				}
+				newFormat := updateChecksum(dep, b.SHA256)
+				updateSourceChecksum(dep, b.SourceSHA256, newFormat)
+
 				if b.Source != "" {
 					dep["source"] = b.Source
 				}
 
-				purlUnwrapped, found := dep["purl"]
-				if found {
-					purl, ok := purlUnwrapped.(string)
-					if ok {
-						dep["purl"] = purlExp.ReplaceAllString(purl, b.PURL)
-					}
-				}
-
+				updatePURL(dep, purlExp, b.PURL)
 				cpesUnwrapped, found := dep["cpes"]
 				if found {
 					cpes, ok := cpesUnwrapped.([]interface{})
@@ -221,7 +200,12 @@ func (b BuildModuleDependency) Update(options ...Option) {
 					}
 
 					if eolDate != "" {
-						dep["deprecation_date"] = eolDate
+						eolKey := "deprecation_date"
+						if newFormat {
+							eolKey = "eol-date"
+						}
+
+						dep[eolKey] = eolDate
 					}
 				}
 			}
@@ -240,5 +224,85 @@ func (b BuildModuleDependency) Update(options ...Option) {
 	if err := os.WriteFile(b.BuildModulePath, c, 0644); err != nil {
 		config.exitHandler.Error(fmt.Errorf("unable to write %s\n%w", b.BuildModulePath, err))
 		return
+	}
+}
+
+func dependencyArch(dep map[string]interface{}) string {
+	if arch, found := dep["arch"]; found {
+		if archStr, ok := arch.(string); ok {
+			return archStr
+		}
+	}
+
+	switch p := dep["purl"].(type) {
+	case string:
+		return archFromPURL(p)
+	default:
+		switch p := dep["purls"].(type) {
+		case []interface{}:
+			for _, u := range p {
+				if uStr, ok := u.(string); ok {
+					if arch := archFromPURL(uStr); arch != "" {
+						return arch
+					}
+				}
+			}
+		}
+
+		return defaultArch
+	}
+
+}
+
+func archFromPURL(purl string) string {
+	purlArchMatches := purlArchExp.FindStringSubmatch(purl)
+	if len(purlArchMatches) == 2 {
+		return purlArchMatches[1]
+	}
+
+	return defaultArch
+}
+
+func updateChecksum(dep map[string]interface{}, sha256 string) bool {
+	if _, ok := dep["sha256"]; ok {
+		dep["sha256"] = sha256
+		return false
+	}
+
+	if _, ok := dep["checksum"]; ok {
+		dep["checksum"] = fmt.Sprintf("sha256:%s", sha256)
+		return true
+	}
+
+	return false
+}
+
+func updateSourceChecksum(dep map[string]interface{}, sourceSHA256 string, newFormat bool) {
+	if sourceSHA256 == "" {
+		return
+	}
+
+	checksumKey := "source-sha256"
+	if newFormat {
+		checksumKey = "source-checksum"
+		sourceSHA256 = fmt.Sprintf("sha256:%s", sourceSHA256)
+	}
+
+	dep[checksumKey] = sourceSHA256
+}
+
+func updatePURL(dep map[string]interface{}, purlExp *regexp.Regexp, newPURL string) {
+	switch purl := dep["purl"].(type) {
+	case string:
+		dep["purl"] = purlExp.ReplaceAllString(purl, newPURL)
+	default:
+		switch purls := dep["purls"].(type) {
+		case []interface{}:
+			for i, p := range purls {
+				if pStr, ok := p.(string); ok {
+					purls[i] = purlExp.ReplaceAllString(pStr, newPURL)
+				}
+			}
+		}
 	}
 }
