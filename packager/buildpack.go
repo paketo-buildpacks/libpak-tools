@@ -60,6 +60,9 @@ type BundleBuildpack struct {
 	// Publish indicates whether to publish the buildpack to the registry
 	Publish bool
 
+	// SkipClean will not clean up resources left over from the build process
+	SkipClean bool
+
 	executor    effect.Executor
 	exitHandler libcnb.ExitHandler
 }
@@ -237,11 +240,10 @@ func (p *BundleBuildpack) CompilePackage(destDir string) {
 
 func (p *BundleBuildpack) CompileAndBundleComponent(buildDirectory string) error {
 	// Compile the buildpack
-	fmt.Println("➜ Compile Buildpack")
 	p.CompilePackage(buildDirectory)
+	fmt.Println()
 
 	// package the buildpack
-	fmt.Printf("➜ Package Buildpack: %s\n", p.BuildpackID)
 	return p.ExecutePackage(buildDirectory)
 }
 
@@ -315,10 +317,12 @@ func (p *BundleBuildpack) Execute() error {
 	}
 
 	// clean up
-	fmt.Println("➜ Cleaning up Docker images")
-	err = p.CleanUpDockerImages()
-	if err != nil {
-		return fmt.Errorf("unable to clean up docker images\n%w", err)
+	if !p.SkipClean {
+		fmt.Println("➜ Cleaning up Docker images")
+		err = p.CleanUpDockerImages()
+		if err != nil {
+			return fmt.Errorf("unable to clean up docker images\n%w", err)
+		}
 	}
 
 	return nil

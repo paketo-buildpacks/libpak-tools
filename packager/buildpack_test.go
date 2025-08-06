@@ -382,6 +382,13 @@ func testBuildpack(t *testing.T, context spec.G, it spec.S) {
 			buildPath = t.TempDir()
 			mockExecutor = &mocks.Executor{}
 
+			Expect(os.WriteFile(filepath.Join(buildpackPath, "buildpack.toml"), []byte(`[buildpack]
+id = "some-id"
+version = "1.0.0"
+name = "Some Buildpack"
+description = "A buildpack for testing"
+homepage = "https://example.com"
+`), 0600)).To(Succeed())
 			Expect(os.WriteFile(filepath.Join(buildpackPath, "package.toml"), []byte("some-toml"), 0600)).To(Succeed())
 		})
 
@@ -414,7 +421,8 @@ func testBuildpack(t *testing.T, context spec.G, it spec.S) {
 			Expect(packageToml).To(BeARegularFile())
 			contents, err := os.ReadFile(packageToml)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(contents)).To(HavePrefix(fmt.Sprintf("[buildpack]\nuri = \"%s\"\n\n", buildpackPath)))
+			Expect(string(contents)).To(HavePrefix(fmt.Sprintf("[buildpack]\nuri = \"%s\"\n\n", buildPath)))
+			Expect(filepath.Join(buildPath, "buildpack.toml")).To(BeARegularFile())
 		})
 	})
 }

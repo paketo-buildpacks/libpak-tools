@@ -41,7 +41,7 @@ func BuildJvmVendorsCommand() *cobra.Command {
 
 	allVendors := []string{}
 	for _, vendor := range jvmVendorList {
-		allVendors = append(allVendors, vendor.ID)
+		allVendors = append(allVendors, vendor.VendorID)
 	}
 
 	i := builder.BuildJvmVendorsCommand{}
@@ -52,12 +52,24 @@ func BuildJvmVendorsCommand() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			i.JVMVendors = jvmVendorList
 
+			if len(i.BuildpackIDs) == 0 {
+				log.Printf("No buildpack IDs specified, you must specify one buildpack ID if using --single-buildpack or a single buildpack will be built per buildpack ID specified")
+			}
+
 			if len(i.SelectedVendors) == 0 && !i.AllVendors {
-				log.Fatal("vendors must be set or include-all-buildpacks must be set")
+				log.Fatal("--vendors must be set or --include-all-vendors must be set")
 			}
 
 			if len(i.SelectedVendors) > 0 && i.AllVendors {
-				log.Printf("Warning: both --buildpack and --include-all-buildpacks flags are set, ignoring --buildpacks flags")
+				log.Printf("Warning: both --buildpack and --include-all-vendors flags are set, ignoring --buildpacks flags")
+			}
+
+			if i.AllVendors && !i.SingleBuildpack {
+				log.Fatal("--include-all-vendors can only be used with --single-buildpack")
+			}
+
+			if i.SingleBuildpack && len(i.BuildpackIDs) != 1 {
+				log.Fatalf("--single-buildpack requires one single and only one --buildpack-id to be specified, but got %q", i.BuildpackIDs)
 			}
 
 			if i.AllVendors {
@@ -70,12 +82,8 @@ func BuildJvmVendorsCommand() *cobra.Command {
 				}
 			}
 
-			if i.SingleBuildpack && len(i.BuildpackVersions) != 1 {
-				log.Fatalf("Single buildpack requires exactly one version, got %q\n", i.BuildpackVersions)
-			}
-
-			if !i.SingleBuildpack && len(i.BuildpackVersions) != len(i.SelectedVendors) {
-				log.Fatalf("Number of versions must match the number of vendors, got %q versions and %q vendors\n", i.BuildpackVersions, i.SelectedVendors)
+			if i.BuildpackPath == "" && (!i.SingleBuildpack || len(i.BuildpackIDs) > 1) {
+				log.Fatal("You must specify --buildpack-path when building multiple buildpacks")
 			}
 
 			if i.BuildpackPath == "" {
@@ -94,18 +102,18 @@ func BuildJvmVendorsCommand() *cobra.Command {
 		},
 	}
 
-	buildJvmVendorsCommand.Flags().StringVar(&i.BuildpackID, "buildpack-id", "paketo-buildpacks/jvm-vendors", "buildpack id")
+	buildJvmVendorsCommand.Flags().StringArrayVar(&i.BuildpackIDs, "buildpack-id", []string{}, "buildpack id and version in the format 'id@version' (default: all vendors)")
 	buildJvmVendorsCommand.Flags().BoolVar(&i.SingleBuildpack, "single-buildpack", false, "build output is a single buildpack with listed vendors (default: false)")
 	buildJvmVendorsCommand.Flags().BoolVar(&i.AllVendors, "include-all-vendors", false, "include all of the vendors (default: false)")
 	buildJvmVendorsCommand.Flags().StringArrayVar(&i.SelectedVendors, "vendors", []string{}, "list of vendors to build")
-	buildJvmVendorsCommand.Flags().StringArrayVar(&i.BuildpackVersions, "version", []string{}, "versions to substitute into buildpack.toml/extension.toml")
-	buildJvmVendorsCommand.Flags().StringVar(&i.BuildpackPath, "buildpack-path", "", "path to buildpack directory")
+	buildJvmVendorsCommand.Flags().StringVar(&i.DefaultVendor, "default-vendor", "", "default vendor to use, if not set the the configured default vendor or first in the vendor list will be used")
+	buildJvmVendorsCommand.Flags().StringVar(&i.BuildpackPath, "buildpack-path", "", "path to jvm-vendors buildpack directory")
 	buildJvmVendorsCommand.Flags().StringVar(&i.CacheLocation, "cache-location", "", "path to cache downloaded dependencies (default: $PWD/dependencies)")
-	buildJvmVendorsCommand.Flags().BoolVar(&i.IncludeDependencies, "include-dependencies", false, "whether to include dependencies (default: false)")
-	buildJvmVendorsCommand.Flags().StringArrayVar(&i.DependencyFilters, "dependency-filter", []string{}, "one or more filters that are applied to exclude dependencies")
-	buildJvmVendorsCommand.Flags().BoolVar(&i.StrictDependencyFilters, "strict-filters", false, "require filter to match all data or just some data (default: false)")
-	buildJvmVendorsCommand.Flags().StringVar(&i.RegistryName, "registry-name", "", "prefix for the registry to publish to (default: the buildpack id)")
-	buildJvmVendorsCommand.Flags().BoolVar(&i.Publish, "publish", false, "publish the buildpack to a buildpack registry (default: false)")
+	buildJvmVendorsCommand.Flags().BoolVar(&i.IncludeDependencies, "include-dependencies", false, "whether to include dependencies, applies to all buildpacks (default: false)")
+	buildJvmVendorsCommand.Flags().StringArrayVar(&i.DependencyFilters, "dependency-filter", []string{}, "one or more filters that are applied to exclude dependencies, applies to all buildpacks")
+	buildJvmVendorsCommand.Flags().BoolVar(&i.StrictDependencyFilters, "strict-filters", false, "require filter to match all data or just some data, applies to all buildpacks (default: false)")
+	buildJvmVendorsCommand.Flags().StringVar(&i.RegistryName, "registry-name", "", "prefix for the registry to publish to, applies to all buildpacks (default: the buildpack id)")
+	buildJvmVendorsCommand.Flags().BoolVar(&i.Publish, "publish", false, "publish the buildpack to a buildpack registry, applies to all buildpacks (default: false)")
 
 	return buildJvmVendorsCommand
 }

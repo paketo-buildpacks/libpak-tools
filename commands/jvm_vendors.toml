@@ -1,59 +1,70 @@
 [[vendors]]
 description = "A Cloud Native Buildpack that provides the Adoptium implementations of JREs and JDKs"
 homepage = "https://github.com/paketo-buildpacks/adoptium"
-id = "paketo-buildpacks/adoptium"
+buildpack_id = "paketo-buildpacks/adoptium"
 name = "Paketo Buildpack for Adoptium"
+vendor_id = "adoptium"
 
 [[vendors]]
 description = "A Cloud Native Buildpack that provides the Alibaba Dragonwell implementations of JREs and JDKs"
 homepage = "https://github.com/paketo-buildpacks/alibaba-dragonwell"
-id = "paketo-buildpacks/alibaba-dragonwell"
+buildpack_id = "paketo-buildpacks/alibaba-dragonwell"
 name = "Paketo Buildpack for Alibaba Dragonwell"
+vendor_id = "alibaba-dragonwell"
 
 [[vendors]]
 description = "A Cloud Native Buildpack that provides the Amazon Corretto implementations of JREs and JDKs"
 homepage = "https://github.com/paketo-buildpacks/amazon-corretto"
-id = "paketo-buildpacks/amazon-corretto"
+buildpack_id = "paketo-buildpacks/amazon-corretto"
 name = "Paketo Buildpack for Amazon Corretto"
+vendor_id = "amazon-corretto"
 
 [[vendors]]
 description = "A Cloud Native Buildpack that provides the Azul Zulu implementations of JREs and JDKs"
 homepage = "https://github.com/paketo-buildpacks/azul-zulu"
-id = "paketo-buildpacks/azul-zulu"
+buildpack_id = "paketo-buildpacks/azul-zulu"
 name = "Paketo Buildpack for Azul Zulu"
+vendor_id = "azul-zulu"
 
 [[vendors]]
 description = "A Cloud Native Buildpack that provides the Bellsoft Liberica implementations of JREs and JDKs"
 homepage = "https://github.com/paketo-buildpacks/bellsoft-liberica"
-id = "paketo-buildpacks/bellsoft-liberica"
+buildpack_id = "paketo-buildpacks/bellsoft-liberica"
 name = "Paketo Buildpack for BellSoft Liberica"
+vendor_id = "bellsoft-liberica"
+default = true
 
 [[vendors]]
 description = "A Cloud Native Buildpack that provides the Eclipse OpenJ9 implementations of JREs and JDKs"
 homepage = "https://github.com/paketo-buildpacks/eclipse-openj9"
-id = "paketo-buildpacks/eclipse-openj9"
+buildpack_id = "paketo-buildpacks/eclipse-openj9"
 name = "Paketo Buildpack for Eclipse OpenJ9"
+vendor_id = "eclipse-openj9"
 
 [[vendors]]
 description = "A Cloud Native Buildpack that provides the GraalVM implementations of JREs, JDKs and Native Image tools"
 homepage = "https://github.com/paketo-buildpacks/graalvm"
-id = "paketo-buildpacks/graalvm"
+buildpack_id = "paketo-buildpacks/graalvm"
 name = "Paketo Buildpack for GraalVM"
+vendor_id = "graalvm"
 
 [[vendors]]
 description = "A Cloud Native Buildpack that provides the Oracle implementations of JREs, JDKs, and Native Image"
 homepage = "https://github.com/paketo-buildpacks/oracle"
-id = "paketo-buildpacks/oracle"
+buildpack_id = "paketo-buildpacks/oracle"
 name = "Paketo Buildpack for Oracle"
+vendor_id = "oracle"
 
 [[vendors]]
 description = "A Cloud Native Buildpack that provides the Microsoft OpenJDK implementations of JREs and JDKs"
 homepage = "https://github.com/paketo-buildpacks/microsoft-openjdk"
-id = "paketo-buildpacks/microsoft-openjdk"
+buildpack_id = "paketo-buildpacks/microsoft-openjdk"
 name = "Paketo Buildpack for Microsoft OpenJDK"
+vendor_id = "microsoft-openjdk"
 
 [[vendors]]
 description = "A Cloud Native Buildpack that provides the SAP Machine implementations of JREs and JDKs"
 homepage = "https://github.com/paketo-buildpacks/sap-machine"
-id = "paketo-buildpacks/sap-machine"
+buildpack_id = "paketo-buildpacks/sap-machine"
 name = "Paketo Buildpack for SapMachine"
+vendor_id = "sap-machine"

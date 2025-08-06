@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/paketo-buildpacks/libpak/v2/sherpa"
@@ -28,18 +30,20 @@ import (
 )
 
 type JVMVendor struct {
-	Description string
-	Homepage    string
-	ID          string
-	Name        string
+	BuildpackID string `toml:"buildpack_id"`
+	Default     bool   `toml:"default"`
+	Description string `toml:"description"`
+	Homepage    string `toml:"homepage"`
+	Name        string `toml:"name"`
+	VendorID    string `toml:"vendor_id"`
 }
 
 type BuildJvmVendorsCommand struct {
-	BuildpackID             string
+	BuildpackIDs            []string
 	SingleBuildpack         bool
 	AllVendors              bool
 	SelectedVendors         []string
-	BuildpackVersions       []string
+	DefaultVendor           string
 	BuildpackPath           string
 	BuildpackTOMLPath       string
 	BuildpackTOMLBackupPath string
@@ -59,25 +63,37 @@ func (b *BuildJvmVendorsCommand) InferBuildpackPath() error {
 		return fmt.Errorf("BP_ROOT must be set")
 	}
 
-	parts := strings.SplitN(b.BuildpackID, "/", 2)
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid buildpack id: %s, must contain two parts that are `/` separated", b.BuildpackID)
+	if len(b.BuildpackIDs) == 0 {
+		return fmt.Errorf("no buildpack IDs specified, cannot infer buildpack path")
 	}
-	bpType, bpName := parts[0], parts[1]
+
+	// Named capture groups for better parsing
+	re := regexp.MustCompile(`^(?P<org>[a-zA-Z0-9-_]+)/(?P<name>[a-zA-Z0-9-_]+)@(?P<version>\d+\.\d+\.\d+)$`)
+
+	matches := re.FindStringSubmatch(b.BuildpackIDs[0])
+	if matches == nil {
+		return fmt.Errorf("invalid buildpack id: %s, must match format 'org/name@version'", b.BuildpackIDs[0])
+	}
+
+	bpType := matches[1]
+	bpName := matches[2]
 
 	switch bpType {
+	case "paketo-buildpacks":
+		b.BuildpackPath = filepath.Join(root, "paketo-buildpacks", bpName)
 	case "paketobuildpacks":
 		b.BuildpackPath = filepath.Join(root, "paketo-buildpacks", bpName)
+	case "paketo-community":
+		b.BuildpackPath = filepath.Join(root, "paketo-community", bpName)
 	case "paketocommunity":
 		b.BuildpackPath = filepath.Join(root, "paketo-community", bpName)
 	default:
-		b.BuildpackPath = filepath.Join(root, b.BuildpackID)
+		b.BuildpackPath = filepath.Join(root, b.BuildpackIDs[0])
 	}
 
 	return nil
 }
 
-// TODO: this needs test coverage
 func (b *BuildJvmVendorsCommand) Execute() error {
 	// make a backup copy of the original buildpack.toml
 	if _, err := os.Stat(b.BuildpackTOMLBackupPath); err == nil {
@@ -91,64 +107,12 @@ func (b *BuildJvmVendorsCommand) Execute() error {
 	}
 
 	if b.SingleBuildpack {
-		fmt.Println("➜ Building single JVM Vendors buildpack")
-
-		vendorList := []string{}
-		for _, vendor := range b.SelectedVendors {
-			parts := strings.SplitN(vendor, "/", 2)
-			if len(parts) == 2 {
-				vendorList = append(vendorList, parts[1])
-			} else {
-				vendorList = append(vendorList, vendor)
-			}
-		}
-
-		if err := internal.UpdateTOMLFile(b.BuildpackTOMLPath, UpdateBuildpackConfiguration(map[string]interface{}{
-			"BP_JVM_VENDORS": strings.Join(vendorList, ","),
-			"BP_JVM_VENDOR":  "bellsoft-liberica",
-		})); err != nil {
-			return fmt.Errorf("failed to customize buildpack.toml: %w", err)
-		}
-
-		pkgCmd := packager.NewBundleBuildpack()
-		pkgCmd.BuildpackID = b.BuildpackID
-		pkgCmd.BuildpackPath = b.BuildpackPath
-		pkgCmd.BuildpackVersion = b.BuildpackVersions[0]
-		pkgCmd.CacheLocation = b.CacheLocation
-		pkgCmd.IncludeDependencies = b.IncludeDependencies
-		pkgCmd.DependencyFilters = b.DependencyFilters
-		pkgCmd.StrictDependencyFilters = b.StrictDependencyFilters
-		pkgCmd.RegistryName = b.RegistryName
-		pkgCmd.Publish = b.Publish
-		if err := pkgCmd.Execute(); err != nil {
-			return fmt.Errorf("failed to build single JVM Vendors buildpack: %w", err)
+		if err := b.BuildSingleBuildpack(); err != nil {
+			return fmt.Errorf("failed to build single buildpack: %w", err)
 		}
 	} else {
-		fmt.Println("➜ Building multiple JVM Vendors buildpacks")
-
-		for i, vendor := range b.SelectedVendors {
-			version := b.BuildpackVersions[i]
-			selectedVendor := b.selectVendor(vendor)
-
-			fmt.Printf("  Building %s@%s\n", vendor, version)
-
-			if err := b.CustomizeBuildpackTOML(selectedVendor, version); err != nil {
-				return fmt.Errorf("failed to customize buildpack.toml: %w", err)
-			}
-
-			pkgCmd := packager.NewBundleBuildpack()
-			pkgCmd.BuildpackID = vendor
-			pkgCmd.BuildpackPath = b.BuildpackPath
-			pkgCmd.BuildpackVersion = b.BuildpackVersions[i]
-			pkgCmd.CacheLocation = b.CacheLocation
-			pkgCmd.IncludeDependencies = b.IncludeDependencies
-			pkgCmd.DependencyFilters = b.DependencyFilters
-			pkgCmd.StrictDependencyFilters = b.StrictDependencyFilters
-			pkgCmd.RegistryName = b.RegistryName
-			pkgCmd.Publish = b.Publish
-			if err := pkgCmd.Execute(); err != nil {
-				return err
-			}
+		if err := b.BuildMultipleBuildpacks(); err != nil {
+			return fmt.Errorf("failed to build multiple buildpacks: %w", err)
 		}
 	}
 
@@ -160,15 +124,133 @@ func (b *BuildJvmVendorsCommand) Execute() error {
 	return os.Remove(b.BuildpackTOMLBackupPath)
 }
 
+// BuildSingleBuildpack builds a single buildpack from the list of JVM Vendors
+func (b *BuildJvmVendorsCommand) BuildSingleBuildpack() error {
+	fmt.Println("➜ Building single JVM Vendors buildpack")
+
+	if len(b.BuildpackIDs) == 0 {
+		return fmt.Errorf("no buildpack IDs specified, you must specify one buildpack ID if using --single-buildpack")
+	}
+
+	if len(b.BuildpackIDs) > 1 {
+		return fmt.Errorf("single buildpack requires exactly one buildpack ID, got %q", b.BuildpackIDs)
+	}
+
+	parts := strings.SplitN(b.BuildpackIDs[0], "@", 2)
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid buildpack ID: %s, must contain two parts that are `@` separated", b.BuildpackIDs[0])
+	}
+
+	defaultVendorId, err := b.selectDefaultVendor()
+	if err != nil {
+		return fmt.Errorf("unable to select default vendor: %w", err)
+	}
+
+	if err := internal.UpdateTOMLFile(b.BuildpackTOMLPath, UpdateBuildpackConfiguration(map[string]interface{}{
+		"BP_JVM_VENDORS": strings.Join(b.SelectedVendors, ","),
+		"BP_JVM_VENDOR":  defaultVendorId,
+	})); err != nil {
+		return fmt.Errorf("failed to customize buildpack.toml: %w", err)
+	}
+
+	pkgCmd := packager.NewBundleBuildpack()
+	pkgCmd.BuildpackID = parts[0]
+	pkgCmd.BuildpackPath = b.BuildpackPath
+	pkgCmd.BuildpackVersion = parts[1]
+	pkgCmd.CacheLocation = b.CacheLocation
+	pkgCmd.IncludeDependencies = b.IncludeDependencies
+	pkgCmd.DependencyFilters = b.DependencyFilters
+	pkgCmd.StrictDependencyFilters = b.StrictDependencyFilters
+	pkgCmd.RegistryName = b.RegistryName
+	pkgCmd.Publish = b.Publish
+	return pkgCmd.Execute()
+}
+
+// BuildMultipleBuildpacks builds multiple buildpacks one with each JVM Vendor
+func (b *BuildJvmVendorsCommand) BuildMultipleBuildpacks() error {
+	fmt.Println("➜ Building multiple JVM Vendors buildpacks")
+
+	if len(b.BuildpackIDs) != len(b.SelectedVendors) {
+		return fmt.Errorf("number of buildpack IDs (%q) must match number of selected vendors (%q)", b.BuildpackIDs, b.SelectedVendors)
+	}
+
+	for i, buildpackID := range b.BuildpackIDs {
+		parts := strings.SplitN(buildpackID, "@", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid buildpack ID: %s, must contain two parts that are `@` separated", buildpackID)
+		}
+
+		selectedVendor := b.selectVendor(b.SelectedVendors[i])
+
+		fmt.Printf("  Building %s\n", buildpackID)
+
+		if err := b.CustomizeBuildpackTOML(selectedVendor, parts[1]); err != nil {
+			return fmt.Errorf("failed to customize buildpack.toml: %w", err)
+		}
+
+		pkgCmd := packager.NewBundleBuildpack()
+		pkgCmd.BuildpackID = parts[0]
+		pkgCmd.BuildpackPath = b.BuildpackPath
+		pkgCmd.BuildpackVersion = parts[1]
+		pkgCmd.CacheLocation = b.CacheLocation
+		pkgCmd.IncludeDependencies = b.IncludeDependencies
+		pkgCmd.DependencyFilters = b.DependencyFilters
+		pkgCmd.StrictDependencyFilters = b.StrictDependencyFilters
+		pkgCmd.RegistryName = b.RegistryName
+		pkgCmd.Publish = b.Publish
+		pkgCmd.SkipClean = i < len(b.BuildpackIDs)-1 // Skip clean on the last buildpack to avoid cleaning up resources needed for subsequent builds
+		if err := pkgCmd.Execute(); err != nil {
+			return err
+		}
+
+		fmt.Println()
+	}
+
+	return nil
+}
+
 func (b *BuildJvmVendorsCommand) selectVendor(vendorID string) JVMVendor {
 	var fullVendor JVMVendor
 	for _, v := range b.JVMVendors {
-		if v.ID == vendorID {
+		if v.VendorID == vendorID {
 			fullVendor = v
 			break
 		}
 	}
 	return fullVendor
+}
+
+func (b *BuildJvmVendorsCommand) selectDefaultVendor() (string, error) {
+	var defaultVendor string
+
+	for _, vendor := range b.SelectedVendors {
+		if vendor == b.DefaultVendor {
+			defaultVendor = vendor
+			break
+		}
+	}
+
+	if defaultVendor == "" {
+		for _, v := range b.JVMVendors {
+			if v.Default && slices.Contains(b.SelectedVendors, v.VendorID) {
+				defaultVendor = v.VendorID
+				break
+			}
+		}
+	}
+
+	if defaultVendor == "" {
+		if len(b.JVMVendors) > 0 {
+			defaultVendor = b.SelectedVendors[0]
+		}
+	}
+
+	if defaultVendor == "" {
+		return "", fmt.Errorf("no default vendor specified via cli args, and no default vendor found in the list of vendors")
+	}
+
+	fmt.Println("➜ Using default vendor", defaultVendor, "from", b.SelectedVendors)
+	return defaultVendor, nil
 }
 
 // CustomizeBuildpackTOML with the buildpack-specific information
@@ -180,18 +262,13 @@ func (b *BuildJvmVendorsCommand) CustomizeBuildpackTOML(jvmVendor JVMVendor, ver
 		return fmt.Errorf("failed to restore original buildpack.toml: %w", err)
 	}
 
-	parts := strings.SplitN(jvmVendor.ID, "/", 2)
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid buildpack id: %s, must contain two parts that are `/` separated", jvmVendor.ID)
-	}
-
 	return internal.MultiUpdateTOMLFILE(
 		b.BuildpackTOMLPath,
 		UpdateBuildpackDetails(jvmVendor, version),
 		UpdateBuildpackConfiguration(map[string]interface{}{
-			"BP_JVM_VENDORS": parts[1],
+			"BP_JVM_VENDORS": jvmVendor.VendorID,
 		}),
-		RemoveDependenciesUnlessInVendorList([]string{parts[1]}))
+		RemoveDependenciesUnlessInVendorList([]string{jvmVendor.VendorID}))
 }
 
 // UpdateBuildpackDetails will get a full buildpack.toml and update the buildpack metadata with the provided details
@@ -209,7 +286,7 @@ func UpdateBuildpackDetails(jvmVendor JVMVendor, version string) func(map[string
 
 		metadata["description"] = jvmVendor.Description
 		metadata["homepage"] = jvmVendor.Homepage
-		metadata["id"] = jvmVendor.ID
+		metadata["id"] = jvmVendor.BuildpackID
 		metadata["name"] = jvmVendor.Name
 		metadata["version"] = version
 	}
@@ -307,20 +384,3 @@ func RemoveDependenciesUnlessInVendorList(vendors []string) func(map[string]inte
 		metadata["dependencies"] = newDeps
 	}
 }
-
-// NOTES:
-// 1. If we are building one big buildpack just build once with the stock buildpack.toml.
-//
-// 2. If we are building individual vendor buildpacks, then iterate the vendors list and for each buildpack to create filter the
-//    list of metadata.dependencies[] in buildpack.toml to only include the dependencies for that vendor. Write a temporary buildpack.toml
-//    with those dependencies and build that buildpack.
-//
-// UNKNOWNS:
-//  - not sure how to handle setting versions of the buildpacks as we iterate through the vendors list??
-//    - when building locally, you'll need to specify the versions for each buildpack to publish
-//    - when building in CI, we'll need to infer the versions from the tag
-//  - what is the workflow going to be like for CI?
-//    - we can easily tag this repo, and then publish the all-vendors buildpack
-//    - but what about individual vendor buildpacks? We need to tag those individually and publish them
-//    - so we could probably use a tag prefix for this (bellsoft-liberica-vX.Y.Z, azul-zulu-vX.Y.Z, etc)
-//    - that CI job would then trigger and set the vendor & version based on the tag information

@@ -42,12 +42,12 @@ func testBuilder(t *testing.T, context spec.G, it spec.S) {
 				},
 			}
 
-			builder.UpdateBuildpackDetails(builder.JVMVendor{"new-desc", "new-homepage", "new-id", "new-name"}, "new-version")(buildpackTOML)
+			builder.UpdateBuildpackDetails(builder.JVMVendor{"paketo-buildpacks/new-id", false, "new-desc", "new-homepage", "new-name", "new-id"}, "new-version")(buildpackTOML)
 
 			Expect(buildpackTOML).To(HaveKey("buildpack"))
 			Expect(buildpackTOML["buildpack"]).To(HaveKeyWithValue("description", "new-desc"))
 			Expect(buildpackTOML["buildpack"]).To(HaveKeyWithValue("homepage", "new-homepage"))
-			Expect(buildpackTOML["buildpack"]).To(HaveKeyWithValue("id", "new-id"))
+			Expect(buildpackTOML["buildpack"]).To(HaveKeyWithValue("id", "paketo-buildpacks/new-id"))
 			Expect(buildpackTOML["buildpack"]).To(HaveKeyWithValue("name", "new-name"))
 			Expect(buildpackTOML["buildpack"]).To(HaveKeyWithValue("version", "new-version"))
 			Expect(buildpackTOML["buildpack"]).To(HaveKeyWithValue("foo", "bar"))
@@ -62,12 +62,12 @@ func testBuilder(t *testing.T, context spec.G, it spec.S) {
 				},
 			}
 
-			builder.UpdateBuildpackDetails(builder.JVMVendor{"new-desc", "new-homepage", "new-id", "new-name"}, "new-version")(buildpackTOML)
+			builder.UpdateBuildpackDetails(builder.JVMVendor{"paketo-buildpacks/new-id", false, "new-desc", "new-homepage", "new-name", "new-id"}, "new-version")(buildpackTOML)
 
 			Expect(buildpackTOML).To(HaveKey("buildpack"))
 			Expect(buildpackTOML["buildpack"]).To(HaveKeyWithValue("description", "new-desc"))
 			Expect(buildpackTOML["buildpack"]).To(HaveKeyWithValue("homepage", "new-homepage"))
-			Expect(buildpackTOML["buildpack"]).To(HaveKeyWithValue("id", "new-id"))
+			Expect(buildpackTOML["buildpack"]).To(HaveKeyWithValue("id", "paketo-buildpacks/new-id"))
 			Expect(buildpackTOML["buildpack"]).To(HaveKeyWithValue("name", "new-name"))
 			Expect(buildpackTOML["buildpack"]).To(HaveKeyWithValue("version", "new-version"))
 			Expect(buildpackTOML["buildpack"]).To(HaveKeyWithValue("foo", "bar"))
