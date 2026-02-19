@@ -1,6 +1,6 @@
 module github.com/paketo-buildpacks/libpak-tools
 
-go 1.25
+go 1.26
 
 require (
 	github.com/paketo-buildpacks/libpak/v2 v2.1.0
@@ -15,8 +15,8 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/net v0.49.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/net v0.50.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
@@ -36,5 +36,5 @@ require (
 	github.com/onsi/gomega v1.39.1
 	github.com/sclevine/spec v1.4.0
 	github.com/spf13/pflag v1.0.10 // indirect
-	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
 )
