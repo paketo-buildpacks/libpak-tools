@@ -18,6 +18,7 @@ package commands
 
 import (
 	_ "embed"
+	"fmt"
 	"log"
 	"path/filepath"
 	"slices"
@@ -50,54 +51,8 @@ func BuildJvmVendorsCommand() *cobra.Command {
 		Use:   "build-jvm-vendors",
 		Short: "Build JVM Vendors Buildpacks",
 		Run: func(cmd *cobra.Command, args []string) {
-			i.JVMVendors = jvmVendorList
-
-			if len(i.BuildpackIDs) == 0 {
-				log.Printf("No buildpack IDs specified, you must specify one buildpack ID if using --single-buildpack or a single buildpack will be built per buildpack ID specified")
-			}
-
-			if len(i.SelectedVendors) == 0 && !i.AllVendors {
-				log.Fatal("--vendors must be set or --include-all-vendors must be set")
-			}
-
-			if len(i.SelectedVendors) > 0 && i.AllVendors {
-				log.Printf("Warning: both --buildpack and --include-all-vendors flags are set, ignoring --buildpacks flags")
-			}
-
-			if i.AllVendors && !i.SingleBuildpack {
-				log.Fatal("--include-all-vendors can only be used with --single-buildpack")
-			}
-
-			if i.SingleBuildpack && len(i.BuildpackIDs) != 1 {
-				log.Fatalf("--single-buildpack requires one single and only one --buildpack-id to be specified, but got %q", i.BuildpackIDs)
-			}
-
-			if i.AllVendors {
-				i.SelectedVendors = allVendors
-			} else {
-				for _, vendor := range i.SelectedVendors {
-					if !slices.Contains(allVendors, vendor) {
-						log.Fatalf("Invalid vendor: %s, possible vendors are %q\n", vendor, allVendors)
-					}
-				}
-			}
-
-			if i.BuildpackPath == "" && (!i.SingleBuildpack || len(i.BuildpackIDs) > 1) {
-				log.Fatal("You must specify --buildpack-path when building multiple buildpacks")
-			}
-
-			if i.BuildpackPath == "" {
-				if err := i.InferBuildpackPath(); err != nil {
-					log.Fatal(err)
-				}
-			}
-
-			i.BuildpackTOMLPath = filepath.Join(i.BuildpackPath, "buildpack.toml")
-			i.BuildpackTOMLBackupPath = filepath.Join(i.BuildpackPath, "buildpack.toml.bak")
-
-			err := i.Execute()
-			if err != nil {
-				log.Fatal("JVM Vendors build failed\n", err)
+			if err := runBuildJvmVendorsCommand(&i, jvmVendorList, allVendors); err != nil {
+				log.Fatal(err)
 			}
 		},
 	}
@@ -116,4 +71,57 @@ func BuildJvmVendorsCommand() *cobra.Command {
 	buildJvmVendorsCommand.Flags().BoolVar(&i.Publish, "publish", false, "publish the buildpack to a buildpack registry, applies to all buildpacks (default: false)")
 
 	return buildJvmVendorsCommand
+}
+
+func runBuildJvmVendorsCommand(i *builder.BuildJvmVendorsCommand, jvmVendorList []builder.JVMVendor, allVendors []string) error {
+	i.JVMVendors = jvmVendorList
+
+	if len(i.BuildpackIDs) == 0 {
+		log.Printf("No buildpack IDs specified, you must specify one buildpack ID if using --single-buildpack or a single buildpack will be built per buildpack ID specified")
+	}
+
+	if len(i.SelectedVendors) == 0 && !i.AllVendors {
+		return fmt.Errorf("--vendors must be set or --include-all-vendors must be set")
+	}
+
+	if len(i.SelectedVendors) > 0 && i.AllVendors {
+		log.Printf("Warning: both --buildpack and --include-all-vendors flags are set, ignoring --buildpacks flags")
+	}
+
+	if i.AllVendors && !i.SingleBuildpack {
+		return fmt.Errorf("--include-all-vendors can only be used with --single-buildpack")
+	}
+
+	if i.SingleBuildpack && len(i.BuildpackIDs) != 1 {
+		return fmt.Errorf("--single-buildpack requires one single and only one --buildpack-id to be specified, but got %q", i.BuildpackIDs)
+	}
+
+	if i.AllVendors {
+		i.SelectedVendors = allVendors
+	} else {
+		for _, vendor := range i.SelectedVendors {
+			if !slices.Contains(allVendors, vendor) {
+				return fmt.Errorf("invalid vendor: %s, possible vendors are %q", vendor, allVendors)
+			}
+		}
+	}
+
+	if i.BuildpackPath == "" && (!i.SingleBuildpack || len(i.BuildpackIDs) > 1) {
+		return fmt.Errorf("you must specify --buildpack-path when building multiple buildpacks")
+	}
+
+	if i.BuildpackPath == "" {
+		if err := i.InferBuildpackPath(); err != nil {
+			return err
+		}
+	}
+
+	i.BuildpackTOMLPath = filepath.Join(i.BuildpackPath, "buildpack.toml")
+	i.BuildpackTOMLBackupPath = filepath.Join(i.BuildpackPath, "buildpack.toml.bak")
+
+	if err := i.Execute(); err != nil {
+		return fmt.Errorf("JVM Vendors build failed\n%w", err)
+	}
+
+	return nil
 }

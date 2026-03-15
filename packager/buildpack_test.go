@@ -370,6 +370,90 @@ func testBuildpack(t *testing.T, context spec.G, it spec.S) {
 		})
 	})
 
+	context("Compile and bundle component", func() {
+		it("compiles source into a destination and packages it", func() {
+			sourceDir := t.TempDir()
+			destDir := t.TempDir()
+			mockExecutor := &mocks.Executor{}
+
+			Expect(os.WriteFile(filepath.Join(sourceDir, "buildpack.toml"), []byte(`[buildpack]
+id = "some-id"
+version = "1.0.0"
+name = "Some Buildpack"
+description = "A buildpack for testing"
+homepage = "https://example.com"
+
+[metadata]
+include-files = ["buildpack.toml"]
+`), 0600)).To(Succeed())
+
+			mockExecutor.On("Execute", mock.MatchedBy(func(e effect.Execution) bool {
+				return e.Command == "pack" &&
+					e.Args[0] == "buildpack" &&
+					e.Args[1] == "package" &&
+					e.Args[2] == "some-id" &&
+					e.Args[3] == "--pull-policy" &&
+					e.Args[4] == "if-not-present" &&
+					e.Args[5] == "--target" &&
+					e.Args[6] == "linux/amd64" &&
+					e.Dir == destDir
+			})).Return(nil)
+
+			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
+			p.BuildpackID = "some-id"
+			p.BuildpackPath = sourceDir
+
+			Expect(p.CompileAndBundleComponent(destDir)).To(Succeed())
+			Expect(filepath.Join(destDir, "buildpack.toml")).To(BeARegularFile())
+		})
+	})
+
+	context("Execute", func() {
+		it("bundles composite buildpacks and cleans docker images", func() {
+			buildpackPath := t.TempDir()
+			mockExecutor := &mocks.Executor{}
+
+			Expect(os.WriteFile(filepath.Join(buildpackPath, "buildpack.toml"), []byte(`[buildpack]
+id = "some-id"
+version = "1.0.0"
+name = "Some Buildpack"
+description = "A buildpack for testing"
+homepage = "https://example.com"
+`), 0600)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(buildpackPath, "package.toml"), []byte("[metadata]\n"), 0600)).To(Succeed())
+
+			mockExecutor.On("Execute", mock.MatchedBy(func(e effect.Execution) bool {
+				if e.Command != "pack" || e.Args[0] != "buildpack" || e.Args[1] != "package" {
+					return false
+				}
+				Expect(e.Args).To(ContainElement("--config"))
+				Expect(e.Args).To(ContainElement("--flatten"))
+				Expect(e.Dir).To(Equal(buildpackPath))
+				return true
+			})).Return(nil).Once()
+
+			mockExecutor.On("Execute", mock.MatchedBy(func(e effect.Execution) bool {
+				return e.Command == "docker" &&
+					e.Args[0] == "image" &&
+					e.Args[1] == "ls" &&
+					e.Args[2] == "--quiet" &&
+					e.Args[3] == "--no-trunc" &&
+					e.Args[4] == "--filter" &&
+					e.Args[5] == "dangling=true"
+			})).Return(func(ex effect.Execution) error {
+				_, err := ex.Stdout.Write([]byte("  "))
+				Expect(err).NotTo(HaveOccurred())
+				return nil
+			}).Once()
+
+			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
+			p.BuildpackID = "some-id"
+			p.BuildpackPath = buildpackPath
+
+			Expect(p.Execute()).To(Succeed())
+		})
+	})
+
 	context("Bundles a Composite", func() {
 		var (
 			buildpackPath string

@@ -76,4 +76,50 @@ key = "new-value"
 `))
 		})
 	})
+
+	context("multiple toml updates", func() {
+		var cfgPath string
+
+		it.Before(func() {
+			cfgPath = "multi-update.toml"
+			Expect(os.WriteFile(cfgPath, []byte("key = \"value\"\n"), 0600)).To(Succeed())
+		})
+
+		it.After(func() {
+			Expect(os.RemoveAll(cfgPath)).To(Succeed())
+		})
+
+		it("applies updates in order", func() {
+			Expect(internal.MultiUpdateTOMLFILE(cfgPath,
+				func(md map[string]interface{}) {
+					md["key"] = "new-value"
+				},
+				func(md map[string]interface{}) {
+					md["added"] = "value"
+				},
+			)).To(Succeed())
+
+			b, err := os.ReadFile(cfgPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(b)).To(ContainSubstring("key = \"new-value\""))
+			Expect(string(b)).To(ContainSubstring("added = \"value\""))
+		})
+
+		it("stops applying updates after a failure", func() {
+			secondUpdateCalled := false
+
+			err := internal.MultiUpdateTOMLFILE(cfgPath,
+				func(md map[string]interface{}) {
+					md["invalid"] = make(chan int)
+				},
+				func(md map[string]interface{}) {
+					secondUpdateCalled = true
+					md["never-written"] = "true"
+				},
+			)
+
+			Expect(err).To(HaveOccurred())
+			Expect(secondUpdateCalled).To(BeFalse())
+		})
+	})
 }

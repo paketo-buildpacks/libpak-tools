@@ -35,6 +35,18 @@ lint: install-golangci-lint
 test: format lint
 	$(GOCMD) test -parallel=1 -count=1 -v ./...
 
+coverage:
+	@echo "> Running tests with coverage..."
+	$(GOCMD) test -covermode=atomic -coverprofile=coverage.out $$(go list ./... | grep -v '/mocks')
+	@echo "> Writing coverage report to coverage.txt..."
+	@$(GOCMD) tool cover -func=coverage.out | tee coverage.txt
+	@echo "> Total coverage:"
+	@tail -n 1 coverage.txt
+
+update-readme-commands:
+	@echo "> Updating README Commands section..."
+	@$(GOCMD) run ./scripts/update-readme-commands
+
 clean:
 	rm -rf ./bin/
 	rm -rf ./binaries/
