@@ -17,6 +17,7 @@
 package commands
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -31,32 +32,7 @@ func PackageBundleCommand() *cobra.Command {
 		Use:   "bundle",
 		Short: "Compile and package a single buildpack (component & composite)",
 		Run: func(cmd *cobra.Command, args []string) {
-			if p.BuildpackID == "" && p.BuildpackPath == "" {
-				log.Fatal("buildpack-id or buildpack-path must be set")
-			}
-
-			if p.BuildpackPath != "" && p.BuildpackID == "" {
-				log.Fatal("buildpack-id and buildpack-path must both be set")
-			}
-
-			if p.BuildpackID != "" && p.BuildpackPath == "" {
-				if err := p.InferBuildpackPath(); err != nil {
-					log.Fatal(err)
-				}
-			}
-
-			if p.BuildpackVersion == "" {
-				if err := p.InferBuildpackVersion(); err != nil {
-					log.Fatal(err)
-				}
-			}
-
-			if p.RegistryName == "" {
-				p.RegistryName = p.BuildpackID
-			}
-
-			err := p.Execute()
-			if err != nil {
+			if err := runPackageBundleCommand(&p); err != nil {
 				log.Fatal(err)
 			}
 		},
@@ -73,4 +49,32 @@ func PackageBundleCommand() *cobra.Command {
 	packageBuildpackCmd.Flags().BoolVar(&p.Publish, "publish", false, "publish the buildpack to a buildpack registry (default: false)")
 
 	return packageBuildpackCmd
+}
+
+func runPackageBundleCommand(p *packager.BundleBuildpack) error {
+	if p.BuildpackID == "" && p.BuildpackPath == "" {
+		return fmt.Errorf("buildpack-id or buildpack-path must be set")
+	}
+
+	if p.BuildpackPath != "" && p.BuildpackID == "" {
+		return fmt.Errorf("buildpack-id and buildpack-path must both be set")
+	}
+
+	if p.BuildpackID != "" && p.BuildpackPath == "" {
+		if err := p.InferBuildpackPath(); err != nil {
+			return err
+		}
+	}
+
+	if p.BuildpackVersion == "" {
+		if err := p.InferBuildpackVersion(); err != nil {
+			return err
+		}
+	}
+
+	if p.RegistryName == "" {
+		p.RegistryName = p.BuildpackID
+	}
+
+	return p.Execute()
 }

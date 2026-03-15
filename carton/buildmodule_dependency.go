@@ -238,8 +238,7 @@ func dependencyArch(dep map[string]interface{}) string {
 	case string:
 		return archFromPURL(p)
 	default:
-		switch p := dep["purls"].(type) {
-		case []interface{}:
+		if p, ok := dep["purls"].([]interface{}); ok {
 			for _, u := range p {
 				if uStr, ok := u.(string); ok {
 					if arch := archFromPURL(uStr); arch != "" {
@@ -251,7 +250,6 @@ func dependencyArch(dep map[string]interface{}) string {
 
 		return defaultArch
 	}
-
 }
 
 func archFromPURL(purl string) string {
@@ -296,8 +294,7 @@ func updatePURL(dep map[string]interface{}, purlExp *regexp.Regexp, newPURL stri
 	case string:
 		dep["purl"] = purlExp.ReplaceAllString(purl, newPURL)
 	default:
-		switch purls := dep["purls"].(type) {
-		case []interface{}:
+		if purls, ok := dep["purls"].([]interface{}); ok {
 			for i, p := range purls {
 				if pStr, ok := p.(string); ok {
 					purls[i] = purlExp.ReplaceAllString(pStr, newPURL)
