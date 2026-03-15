@@ -28,4 +28,3 @@ func TestUnit(t *testing.T) {
 	suite("Commands", testCommands)
 	suite.Run(t)
 }
-

@@ -38,4 +38,3 @@ func CaptureStdout(t *testing.T, action func()) string {
 
 	return string(output)
 }
-

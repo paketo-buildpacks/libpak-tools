@@ -5,9 +5,10 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-	"github.com/paketo-buildpacks/libpak-tools/internal/testutil"
 	"github.com/sclevine/spec"
 	"github.com/sclevine/spec/report"
+
+	"github.com/paketo-buildpacks/libpak-tools/internal/testutil"
 )
 
 func TestUnit(t *testing.T) {

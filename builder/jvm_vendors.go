@@ -141,14 +141,14 @@ func (b *BuildJvmVendorsCommand) BuildSingleBuildpack() error {
 		return fmt.Errorf("invalid buildpack ID: %s, must contain two parts that are `@` separated", b.BuildpackIDs[0])
 	}
 
-	defaultVendorId, err := b.selectDefaultVendor()
+	defaultVendorID, err := b.selectDefaultVendor()
 	if err != nil {
 		return fmt.Errorf("unable to select default vendor: %w", err)
 	}
 
 	if err := internal.UpdateTOMLFile(b.BuildpackTOMLPath, UpdateBuildpackConfiguration(map[string]interface{}{
 		"BP_JVM_VENDORS": strings.Join(b.SelectedVendors, ","),
-		"BP_JVM_VENDOR":  defaultVendorId,
+		"BP_JVM_VENDOR":  defaultVendorID,
 	})); err != nil {
 		return fmt.Errorf("failed to customize buildpack.toml: %w", err)
 	}
