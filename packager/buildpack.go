@@ -60,6 +60,9 @@ type BundleBuildpack struct {
 	// Publish indicates whether to publish the buildpack to the registry
 	Publish bool
 
+	// SkipClean will not clean up resources left over from the build process
+	SkipClean bool
+
 	executor    effect.Executor
 	exitHandler libcnb.ExitHandler
 }
@@ -151,8 +154,8 @@ func (p *BundleBuildpack) CleanUpDockerImages() error {
 
 	imagesToClean := []string{}
 	for _, img := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
-		if img != "" {
-			imagesToClean = append(imagesToClean, img)
+		if strings.TrimSpace(img) != "" {
+			imagesToClean = append(imagesToClean, strings.TrimSpace(img))
 		}
 	}
 
@@ -237,11 +240,10 @@ func (p *BundleBuildpack) CompilePackage(destDir string) {
 
 func (p *BundleBuildpack) CompileAndBundleComponent(buildDirectory string) error {
 	// Compile the buildpack
-	fmt.Println("➜ Compile Buildpack")
 	p.CompilePackage(buildDirectory)
+	fmt.Println()
 
 	// package the buildpack
-	fmt.Printf("➜ Package Buildpack: %s\n", p.BuildpackID)
 	return p.ExecutePackage(buildDirectory)
 }
 
@@ -267,6 +269,10 @@ func (p *BundleBuildpack) BundleComposite(buildDirectory string) error {
 }
 
 func copyPackageTomlAndAddURI(buildpackPath, destDir string) (string, error) {
+	if err := sherpa.CopyFileFrom(filepath.Join(buildpackPath, "buildpack.toml"), filepath.Join(destDir, "buildpack.toml")); err != nil {
+		return "", fmt.Errorf("unable to copy buildpack.toml\n%w", err)
+	}
+
 	inputPackageToml, err := os.Open(filepath.Join(buildpackPath, "package.toml"))
 	if err != nil {
 		return "", fmt.Errorf("unable to open package.toml\n%w", err)
@@ -280,7 +286,7 @@ func copyPackageTomlAndAddURI(buildpackPath, destDir string) (string, error) {
 	}
 	defer outputPackageToml.Close()
 
-	_, err = outputPackageToml.WriteString(fmt.Sprintf("[buildpack]\nuri = \"%s\"\n\n", buildpackPath))
+	_, err = outputPackageToml.WriteString(fmt.Sprintf("[buildpack]\nuri = \"%s\"\n\n", destDir))
 	if err != nil {
 		return "", fmt.Errorf("unable to write uri\n%w", err)
 	}
@@ -311,10 +317,12 @@ func (p *BundleBuildpack) Execute() error {
 	}
 
 	// clean up
-	fmt.Println("➜ Cleaning up Docker images")
-	err = p.CleanUpDockerImages()
-	if err != nil {
-		return fmt.Errorf("unable to clean up docker images\n%w", err)
+	if !p.SkipClean {
+		fmt.Println("➜ Cleaning up Docker images")
+		err = p.CleanUpDockerImages()
+		if err != nil {
+			return fmt.Errorf("unable to clean up docker images\n%w", err)
+		}
 	}
 
 	return nil

@@ -17,6 +17,7 @@
 package commands
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -31,51 +32,9 @@ func DependencyUpdateBuildModuleCommand() *cobra.Command {
 		Use:   "build-module",
 		Short: "Update a build module dependency",
 		Run: func(cmd *cobra.Command, args []string) {
-			if b.BuildModulePath == "" {
-				log.Fatal("buildmodule toml path must be set")
+			if err := runDependencyUpdateBuildModule(&b); err != nil {
+				log.Fatal(err)
 			}
-
-			if b.ID == "" {
-				log.Fatal("id must be set")
-			}
-
-			if b.Arch == "" {
-				b.Arch = "amd64"
-			}
-
-			if b.SHA256 == "" {
-				log.Fatal("sha256 must be set")
-			}
-
-			if b.URI == "" {
-				log.Fatal("uri must be set")
-			}
-
-			if b.Version == "" {
-				log.Fatal("version must be set")
-			}
-
-			if b.VersionPattern == "" {
-				log.Fatal("version-pattern must be set")
-			}
-
-			if b.PURL == "" {
-				b.PURL = b.Version
-			}
-
-			if b.PURLPattern == "" {
-				b.PURLPattern = b.VersionPattern
-			}
-
-			if b.CPE == "" {
-				b.CPE = b.Version
-			}
-
-			if b.CPEPattern == "" {
-				b.CPEPattern = b.VersionPattern
-			}
-
-			b.Update()
 		},
 	}
 
@@ -95,4 +54,53 @@ func DependencyUpdateBuildModuleCommand() *cobra.Command {
 	dependencyUpdateBuildModuleCmd.Flags().StringVar(&b.EolID, "eol-id", "", "id of the dependency for looking up the EOL date on the https://endoflife.date/")
 
 	return dependencyUpdateBuildModuleCmd
+}
+
+func runDependencyUpdateBuildModule(b *carton.BuildModuleDependency) error {
+	if b.BuildModulePath == "" {
+		return fmt.Errorf("buildmodule toml path must be set")
+	}
+
+	if b.ID == "" {
+		return fmt.Errorf("id must be set")
+	}
+
+	if b.Arch == "" {
+		b.Arch = "amd64"
+	}
+
+	if b.SHA256 == "" {
+		return fmt.Errorf("sha256 must be set")
+	}
+
+	if b.URI == "" {
+		return fmt.Errorf("uri must be set")
+	}
+
+	if b.Version == "" {
+		return fmt.Errorf("version must be set")
+	}
+
+	if b.VersionPattern == "" {
+		return fmt.Errorf("version-pattern must be set")
+	}
+
+	if b.PURL == "" {
+		b.PURL = b.Version
+	}
+
+	if b.PURLPattern == "" {
+		b.PURLPattern = b.VersionPattern
+	}
+
+	if b.CPE == "" {
+		b.CPE = b.Version
+	}
+
+	if b.CPEPattern == "" {
+		b.CPEPattern = b.VersionPattern
+	}
+
+	b.Update()
+	return nil
 }
