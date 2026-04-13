@@ -3,7 +3,7 @@ module github.com/paketo-buildpacks/libpak-tools
 go 1.26
 
 require (
-	github.com/paketo-buildpacks/libpak/v2 v2.1.0
+	github.com/paketo-buildpacks/libpak/v2 v2.2.0
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 )
