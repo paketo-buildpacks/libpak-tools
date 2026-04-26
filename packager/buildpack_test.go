@@ -16,7 +16,10 @@
 package packager_test
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -403,8 +406,69 @@ include-files = ["buildpack.toml"]
 			p.BuildpackID = "some-id"
 			p.BuildpackPath = sourceDir
 
+			Expect(p.GZipBuildpackSource(destDir)).To(Succeed())
+			Expect(filepath.Join(destDir, "buildpack.tgz")).To(BeARegularFile())
+
 			Expect(p.CompileAndBundleComponent(destDir)).To(Succeed())
 			Expect(filepath.Join(destDir, "buildpack.toml")).To(BeARegularFile())
+		})
+
+		it("returns a gzip error if source cannot be archived", func() {
+			destDir := t.TempDir()
+			mockExecutor := &mocks.Executor{}
+
+			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
+			p.BuildpackPath = filepath.Join(t.TempDir(), "missing-source-dir")
+
+			Expect(p.CompileAndBundleComponent(destDir)).To(MatchError(ContainSubstring("unable to gzip buildpack source")))
+		})
+	})
+
+	context("ZipBuildpackSource", func() {
+		it("creates a tar.gz archive of buildpack source in destination directory", func() {
+			sourceDir := t.TempDir()
+			destDir := t.TempDir()
+
+			Expect(os.MkdirAll(filepath.Join(sourceDir, "nested"), 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(sourceDir, "buildpack.toml"), []byte("buildpack-content"), 0600)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(sourceDir, "nested", "file.txt"), []byte("nested-content"), 0600)).To(Succeed())
+
+			p := packager.NewBundleBuildpack()
+			p.BuildpackPath = sourceDir
+			p.GZipBuildpackSource(destDir)
+
+			archivePath := filepath.Join(destDir, "buildpack.tgz")
+			Expect(archivePath).To(BeARegularFile())
+
+			archiveFile, err := os.Open(archivePath)
+			Expect(err).NotTo(HaveOccurred())
+			defer archiveFile.Close()
+
+			gzReader, err := gzip.NewReader(archiveFile)
+			Expect(err).NotTo(HaveOccurred())
+			defer gzReader.Close()
+
+			tarReader := tar.NewReader(gzReader)
+			contents := map[string]string{}
+
+			for {
+				header, err := tarReader.Next()
+				if err == io.EOF {
+					break
+				}
+				Expect(err).NotTo(HaveOccurred())
+
+				if header.Typeflag != tar.TypeReg {
+					continue
+				}
+
+				data, err := io.ReadAll(tarReader)
+				Expect(err).NotTo(HaveOccurred())
+				contents[header.Name] = string(data)
+			}
+
+			Expect(contents).To(HaveKeyWithValue("buildpack.toml", "buildpack-content"))
+			Expect(contents).To(HaveKeyWithValue("nested/file.txt", "nested-content"))
 		})
 	})
 
@@ -506,6 +570,7 @@ homepage = "https://example.com"
 			contents, err := os.ReadFile(packageToml)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(HavePrefix(fmt.Sprintf("[buildpack]\nuri = \"%s\"\n\n", buildPath)))
+			Expect(filepath.Join(buildPath, "buildpack.tgz")).To(BeARegularFile())
 			Expect(filepath.Join(buildPath, "buildpack.toml")).To(BeARegularFile())
 		})
 	})

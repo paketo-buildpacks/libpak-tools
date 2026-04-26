@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/buildpacks/libcnb/v2"
+	"github.com/paketo-buildpacks/libpak/v2/crush"
 	"github.com/paketo-buildpacks/libpak/v2/effect"
 	"github.com/paketo-buildpacks/libpak/v2/sherpa"
 
@@ -238,7 +239,26 @@ func (p *BundleBuildpack) CompilePackage(destDir string) {
 	pkg.Create(options...)
 }
 
+// GZipBuildpackSource zips the buildpack source code and places it in the destination directory
+func (p *BundleBuildpack) GZipBuildpackSource(destDir string) error {
+	archivePath := filepath.Join(destDir, "buildpack.tgz")
+
+	archiveFile, err := os.Create(archivePath)
+	if err != nil {
+		return fmt.Errorf("unable to create archive file at %s\n%w", archivePath, err)
+	}
+	defer archiveFile.Close()
+
+	return crush.CreateTarGz(archiveFile, p.BuildpackPath)
+}
+
 func (p *BundleBuildpack) CompileAndBundleComponent(buildDirectory string) error {
+	// Make a gzip of the buildpack source
+	err := p.GZipBuildpackSource(buildDirectory)
+	if err != nil {
+		return fmt.Errorf("unable to gzip buildpack source\n%w", err)
+	}
+
 	// Compile the buildpack
 	p.CompilePackage(buildDirectory)
 	fmt.Println()
@@ -261,6 +281,11 @@ func (p *BundleBuildpack) BundleComposite(buildDirectory string) error {
 
 	if !sherpa.ResolveBool("BP_FLATTEN_DISABLED") {
 		args = append(args, "--flatten")
+	}
+
+	err = p.GZipBuildpackSource(buildDirectory)
+	if err != nil {
+		return fmt.Errorf("unable to gzip buildpack source\n%w", err)
 	}
 
 	// we still package from the buildpack directory though, only the package.toml is in the temp directory
