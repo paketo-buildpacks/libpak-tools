@@ -69,6 +69,7 @@ func BuildJvmVendorsCommand() *cobra.Command {
 	buildJvmVendorsCommand.Flags().BoolVar(&i.StrictDependencyFilters, "strict-filters", false, "require filter to match all data or just some data, applies to all buildpacks (default: false)")
 	buildJvmVendorsCommand.Flags().StringVar(&i.RegistryName, "registry-name", "", "prefix for the registry to publish to, applies to all buildpacks (default: the buildpack id)")
 	buildJvmVendorsCommand.Flags().BoolVar(&i.Publish, "publish", false, "publish the buildpack to a buildpack registry, applies to all buildpacks (default: false)")
+	buildJvmVendorsCommand.Flags().StringVar(&i.Format, "format", "image", "format for the output, either image or file (default: image)")
 
 	return buildJvmVendorsCommand
 }
