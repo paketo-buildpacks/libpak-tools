@@ -16,7 +16,10 @@
 package packager_test
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -335,6 +338,119 @@ func testBuildpack(t *testing.T, context spec.G, it spec.S) {
 
 			Expect(p.ExecutePackage("/some/path", "--some-more-args")).To(Succeed())
 		})
+
+		it("does not include image format when requested as that's the default", func() {
+			mockExecutor.On("Execute", mock.MatchedBy(func(e effect.Execution) bool {
+				return e.Command == "pack" &&
+					e.Args[0] == "buildpack" &&
+					e.Args[1] == "package" &&
+					e.Args[2] == "some-id" &&
+					e.Args[3] == "--pull-policy" &&
+					e.Args[4] == "if-not-present" &&
+					e.Args[5] == "--target" &&
+					e.Args[6] == "linux/amd64" &&
+					e.Dir == "/some/path"
+			})).Return(nil)
+
+			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
+			p.BuildpackID = "some-id"
+			p.Format = "image"
+
+			Expect(p.ExecutePackage("/some/path")).To(Succeed())
+		})
+
+		it("uses default output name with buildpack path prefix for file format", func() {
+			mockExecutor.On("Execute", mock.MatchedBy(func(e effect.Execution) bool {
+				return e.Command == "pack" &&
+					e.Args[0] == "buildpack" &&
+					e.Args[1] == "package" &&
+					e.Args[2] == "/other/path/buildpackage.cnb" &&
+					e.Args[3] == "--pull-policy" &&
+					e.Args[4] == "if-not-present" &&
+					e.Args[5] == "--format" &&
+					e.Args[6] == "file" &&
+					e.Args[7] == "--target" &&
+					e.Args[8] == "linux/amd64" &&
+					e.Dir == "/some/path"
+			})).Return(nil)
+
+			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
+			p.BuildpackID = "some-id"
+			p.Format = "file"
+			p.BuildpackPath = "/other/path"
+			p.OutputName = "buildpackage.cnb"
+
+			Expect(p.ExecutePackage("/some/path")).To(Succeed())
+		})
+
+		it("uses custom output name with buildpack path prefix for file format", func() {
+			mockExecutor.On("Execute", mock.MatchedBy(func(e effect.Execution) bool {
+				return e.Command == "pack" &&
+					e.Args[0] == "buildpack" &&
+					e.Args[1] == "package" &&
+					e.Args[2] == "/other/path/custom-output.cnb" &&
+					e.Args[3] == "--pull-policy" &&
+					e.Args[4] == "if-not-present" &&
+					e.Args[5] == "--format" &&
+					e.Args[6] == "file" &&
+					e.Args[7] == "--target" &&
+					e.Args[8] == "linux/amd64" &&
+					e.Dir == "/some/path"
+			})).Return(nil)
+
+			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
+			p.BuildpackID = "some-id"
+			p.Format = "file"
+			p.BuildpackPath = "/other/path"
+			p.OutputName = "custom-output.cnb"
+
+			Expect(p.ExecutePackage("/some/path")).To(Succeed())
+		})
+
+		it("resolves relative buildpack path for file format output", func() {
+			previousWD, err := os.Getwd()
+			Expect(err).NotTo(HaveOccurred())
+
+			relativeRoot := t.TempDir()
+			Expect(os.Chdir(relativeRoot)).To(Succeed())
+			defer os.Chdir(previousWD)
+
+			absoluteRoot, err := filepath.Abs(".")
+			Expect(err).NotTo(HaveOccurred())
+
+			expectedOutput := filepath.Join(absoluteRoot, "buildpackage.cnb")
+
+			mockExecutor.On("Execute", mock.MatchedBy(func(e effect.Execution) bool {
+				return e.Command == "pack" &&
+					e.Args[0] == "buildpack" &&
+					e.Args[1] == "package" &&
+					e.Args[2] == expectedOutput &&
+					e.Args[3] == "--pull-policy" &&
+					e.Args[4] == "if-not-present" &&
+					e.Args[5] == "--format" &&
+					e.Args[6] == "file" &&
+					e.Args[7] == "--target" &&
+					e.Args[8] == "linux/amd64" &&
+					e.Dir == "/some/path"
+			})).Return(nil)
+
+			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
+			p.BuildpackID = "some-id"
+			p.Format = "file"
+			p.BuildpackPath = "."
+			p.OutputName = "buildpackage.cnb"
+
+			Expect(p.ExecutePackage("/some/path")).To(Succeed())
+		})
+
+		it("errors when file format and publish are both requested", func() {
+			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
+			p.BuildpackID = "some-id"
+			p.Format = "file"
+			p.Publish = true
+
+			Expect(p.ExecutePackage("/some/path")).To(MatchError("unable to package, cannot publish when format is set to file"))
+		})
 	})
 
 	context("CompilePackage", func() {
@@ -402,9 +518,71 @@ include-files = ["buildpack.toml"]
 			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
 			p.BuildpackID = "some-id"
 			p.BuildpackPath = sourceDir
+			p.OutputName = "buildpackage.cnb"
+
+			Expect(p.GZipBuildpack(destDir)).To(Succeed())
+			Expect(filepath.Join(sourceDir, "buildpackage.tgz")).To(BeARegularFile())
 
 			Expect(p.CompileAndBundleComponent(destDir)).To(Succeed())
 			Expect(filepath.Join(destDir, "buildpack.toml")).To(BeARegularFile())
+		})
+
+		it("returns a gzip error if build directory cannot be archived", func() {
+			mockExecutor := &mocks.Executor{}
+
+			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
+			p.BuildpackPath = t.TempDir()
+			p.OutputName = "buildpackage.cnb"
+
+			Expect(p.GZipBuildpack(filepath.Join(t.TempDir(), "missing-build-dir"))).To(MatchError(ContainSubstring("unable to create tar.gz archive")))
+		})
+	})
+
+	context("GZipBuildpack", func() {
+		it("creates a tar.gz archive of build directory in buildpack directory", func() {
+			sourceDir := t.TempDir()
+			destDir := t.TempDir()
+
+			Expect(os.MkdirAll(filepath.Join(destDir, "nested"), 0755)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(destDir, "buildpack.toml"), []byte("buildpack-content"), 0600)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(destDir, "nested", "file.txt"), []byte("nested-content"), 0600)).To(Succeed())
+
+			p := packager.NewBundleBuildpack()
+			p.BuildpackPath = sourceDir
+			Expect(p.GZipBuildpack(destDir)).To(Succeed())
+
+			archivePath := filepath.Join(sourceDir, "buildpackage.tgz")
+			Expect(archivePath).To(BeARegularFile())
+
+			archiveFile, err := os.Open(archivePath)
+			Expect(err).NotTo(HaveOccurred())
+			defer archiveFile.Close()
+
+			gzReader, err := gzip.NewReader(archiveFile)
+			Expect(err).NotTo(HaveOccurred())
+			defer gzReader.Close()
+
+			tarReader := tar.NewReader(gzReader)
+			contents := map[string]string{}
+
+			for {
+				header, err := tarReader.Next()
+				if err == io.EOF {
+					break
+				}
+				Expect(err).NotTo(HaveOccurred())
+
+				if header.Typeflag != tar.TypeReg {
+					continue
+				}
+
+				data, err := io.ReadAll(tarReader)
+				Expect(err).NotTo(HaveOccurred())
+				contents[header.Name] = string(data)
+			}
+
+			Expect(contents).To(HaveKeyWithValue("buildpack.toml", "buildpack-content"))
+			Expect(contents).To(HaveKeyWithValue("nested/file.txt", "nested-content"))
 		})
 	})
 
@@ -498,6 +676,7 @@ homepage = "https://example.com"
 			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
 			p.BuildpackID = "some-id"
 			p.BuildpackPath = buildpackPath
+			p.OutputName = "buildpackage.cnb"
 
 			Expect(p.BundleComposite(buildPath)).To(Succeed())
 
@@ -506,6 +685,7 @@ homepage = "https://example.com"
 			contents, err := os.ReadFile(packageToml)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(HavePrefix(fmt.Sprintf("[buildpack]\nuri = \"%s\"\n\n", buildPath)))
+			Expect(filepath.Join(buildpackPath, "buildpackage.tgz")).To(BeARegularFile())
 			Expect(filepath.Join(buildPath, "buildpack.toml")).To(BeARegularFile())
 		})
 	})

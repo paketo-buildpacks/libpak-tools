@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/buildpacks/libcnb/v2"
+	"github.com/paketo-buildpacks/libpak/v2/crush"
 	"github.com/paketo-buildpacks/libpak/v2/effect"
 	"github.com/paketo-buildpacks/libpak/v2/sherpa"
 
@@ -57,6 +58,12 @@ type BundleBuildpack struct {
 	// RegistryName is the prefix to use when publishing the buildpack
 	RegistryName string
 
+	// Format for the output, defaults to image. Other option is file.
+	Format string
+
+	// OutputName is the name of the output file when format is set to file, defaults to buildpackage.cnb in the buildpack directory
+	OutputName string
+
 	// Publish indicates whether to publish the buildpack to the registry
 	Publish bool
 
@@ -69,7 +76,9 @@ type BundleBuildpack struct {
 
 func NewBundleBuildpack() BundleBuildpack {
 	return BundleBuildpack{
-		executor: effect.NewExecutor(),
+		Format:     "image",
+		OutputName: "buildpackage.cnb",
+		executor:   effect.NewExecutor(),
 	}
 }
 
@@ -185,16 +194,31 @@ func (p *BundleBuildpack) ExecutePackage(workingDirectory string, additionalArgs
 		pullPolicy = "if-not-present"
 	}
 
-	imageName := p.BuildpackID
+	outputName := p.BuildpackID
 	if p.RegistryName != "" {
-		imageName = p.RegistryName
+		outputName = p.RegistryName
+	}
+
+	if p.Format == "file" {
+		absBuildpackPath, err := filepath.Abs(p.BuildpackPath)
+		if err != nil {
+			return fmt.Errorf("unable to resolve absolute buildpack path: %w", err)
+		}
+
+		outputName = filepath.Join(absBuildpackPath, p.OutputName)
 	}
 
 	args := []string{
 		"buildpack",
 		"package",
-		imageName,
+		outputName,
 		"--pull-policy", pullPolicy,
+	}
+
+	if p.Format == "file" && p.Publish {
+		return fmt.Errorf("unable to package, cannot publish when format is set to file")
+	} else if p.Format == "file" {
+		args = append(args, "--format", "file")
 	}
 
 	if p.Publish {
@@ -238,10 +262,43 @@ func (p *BundleBuildpack) CompilePackage(destDir string) {
 	pkg.Create(options...)
 }
 
+// GZipBuildpack zips the buildpack source code and places it in the destination directory
+func (p *BundleBuildpack) GZipBuildpack(destDir string) error {
+	archiveFile, err := os.CreateTemp("", "buildpack-*.tgz")
+	if err != nil {
+		return fmt.Errorf("unable to create temporary archive file\n%w", err)
+	}
+	archivePath := archiveFile.Name()
+	defer os.Remove(archivePath)
+
+	err = crush.CreateTarGz(archiveFile, destDir)
+	if err != nil {
+		return fmt.Errorf("unable to create tar.gz archive\n%w", err)
+	}
+
+	if err := archiveFile.Close(); err != nil {
+		return fmt.Errorf("unable to close archive file\n%w", err)
+	}
+
+	// move the archive to the buildpack directory, so it survives the temp build directory
+	destArchivePath := filepath.Join(p.BuildpackPath, strings.Replace(p.OutputName, ".cnb", ".tgz", 1))
+	if err := sherpa.CopyFileFrom(archivePath, destArchivePath); err != nil {
+		return fmt.Errorf("unable to copy archive to buildpack directory\n%w", err)
+	}
+
+	return os.Remove(archivePath)
+}
+
 func (p *BundleBuildpack) CompileAndBundleComponent(buildDirectory string) error {
 	// Compile the buildpack
 	p.CompilePackage(buildDirectory)
 	fmt.Println()
+
+	// Make a gzip of the buildpack binaries
+	err := p.GZipBuildpack(buildDirectory)
+	if err != nil {
+		return fmt.Errorf("unable to gzip buildpack source\n%w", err)
+	}
 
 	// package the buildpack
 	return p.ExecutePackage(buildDirectory)
@@ -261,6 +318,11 @@ func (p *BundleBuildpack) BundleComposite(buildDirectory string) error {
 
 	if !sherpa.ResolveBool("BP_FLATTEN_DISABLED") {
 		args = append(args, "--flatten")
+	}
+
+	err = p.GZipBuildpack(buildDirectory)
+	if err != nil {
+		return fmt.Errorf("unable to gzip buildpack source\n%w", err)
 	}
 
 	// we still package from the buildpack directory though, only the package.toml is in the temp directory

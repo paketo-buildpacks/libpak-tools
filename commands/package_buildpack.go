@@ -47,6 +47,8 @@ func PackageBundleCommand() *cobra.Command {
 	packageBuildpackCmd.Flags().BoolVar(&p.StrictDependencyFilters, "strict-filters", false, "require filter to match all data or just some data (default: false)")
 	packageBuildpackCmd.Flags().StringVar(&p.RegistryName, "registry-name", "", "prefix for the registry to publish to (default: your buildpack id)")
 	packageBuildpackCmd.Flags().BoolVar(&p.Publish, "publish", false, "publish the buildpack to a buildpack registry (default: false)")
+	packageBuildpackCmd.Flags().StringVar(&p.Format, "format", "image", "format for the output, either image or file (default: image)")
+	packageBuildpackCmd.Flags().StringVar(&p.OutputName, "output-name", "buildpackage.cnb", "name of the output file when format is set to file (default: buildpackage.cnb)")
 
 	return packageBuildpackCmd
 }
@@ -58,6 +60,10 @@ func runPackageBundleCommand(p *packager.BundleBuildpack) error {
 
 	if p.BuildpackPath != "" && p.BuildpackID == "" {
 		return fmt.Errorf("buildpack-id and buildpack-path must both be set")
+	}
+
+	if p.Format != "image" && p.Format != "file" {
+		return fmt.Errorf("invalid format %s, must be either image or file", p.Format)
 	}
 
 	if p.BuildpackID != "" && p.BuildpackPath == "" {
