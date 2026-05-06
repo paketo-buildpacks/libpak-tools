@@ -64,6 +64,9 @@ type BundleBuildpack struct {
 	// OutputName is the name of the output file when format is set to file, defaults to buildpackage.cnb in the buildpack directory
 	OutputName string
 
+	// OutputPath is the directory where output files will be created
+	OutputPath string
+
 	// Publish indicates whether to publish the buildpack to the registry
 	Publish bool
 
@@ -200,12 +203,25 @@ func (p *BundleBuildpack) ExecutePackage(workingDirectory string, additionalArgs
 	}
 
 	if p.Format == "file" {
-		absBuildpackPath, err := filepath.Abs(p.BuildpackPath)
-		if err != nil {
-			return fmt.Errorf("unable to resolve absolute buildpack path: %w", err)
+		if p.OutputPath == "" {
+			absBuildpackPath, err := filepath.Abs(p.BuildpackPath)
+			if err != nil {
+				return fmt.Errorf("unable to resolve absolute buildpack path: %w", err)
+			}
+			p.OutputPath = absBuildpackPath
+		} else {
+			absOutputPath, err := filepath.Abs(p.OutputPath)
+			if err != nil {
+				return fmt.Errorf("unable to resolve absolute output path: %w", err)
+			}
+			p.OutputPath = absOutputPath
 		}
 
-		outputName = filepath.Join(absBuildpackPath, p.OutputName)
+		if err := os.MkdirAll(p.OutputPath, 0755); err != nil {
+			return fmt.Errorf("unable to make directory at path [%s]: %w", p.OutputPath, err)
+		}
+
+		outputName = filepath.Join(p.OutputPath, p.OutputName)
 	}
 
 	args := []string{
@@ -280,8 +296,17 @@ func (p *BundleBuildpack) GZipBuildpack(destDir string) error {
 		return fmt.Errorf("unable to close archive file\n%w", err)
 	}
 
-	// move the archive to the buildpack directory, so it survives the temp build directory
-	destArchivePath := filepath.Join(p.BuildpackPath, strings.Replace(p.OutputName, ".cnb", ".tgz", 1))
+	outputDir := p.OutputPath
+	if outputDir == "" {
+		outputDir = p.BuildpackPath
+	}
+
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return fmt.Errorf("unable to create output directory\n%w", err)
+	}
+
+	// move the archive to the output directory, so it survives the temp build directory
+	destArchivePath := filepath.Join(outputDir, strings.Replace(p.OutputName, ".cnb", ".tgz", 1))
 	if err := sherpa.CopyFileFrom(archivePath, destArchivePath); err != nil {
 		return fmt.Errorf("unable to copy archive to buildpack directory\n%w", err)
 	}

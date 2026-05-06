@@ -70,6 +70,7 @@ func BuildJvmVendorsCommand() *cobra.Command {
 	buildJvmVendorsCommand.Flags().StringVar(&i.RegistryName, "registry-name", "", "prefix for the registry to publish to, applies to all buildpacks (default: the buildpack id)")
 	buildJvmVendorsCommand.Flags().BoolVar(&i.Publish, "publish", false, "publish the buildpack to a buildpack registry, applies to all buildpacks (default: false)")
 	buildJvmVendorsCommand.Flags().StringVar(&i.Format, "format", "image", "format for the output, either image or file (default: image)")
+	buildJvmVendorsCommand.Flags().StringVar(&i.OutputPath, "output-path", "", "path to directory where output files will be created (default: current directory)")
 
 	return buildJvmVendorsCommand
 }

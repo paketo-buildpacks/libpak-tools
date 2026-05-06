@@ -54,6 +54,7 @@ type BuildJvmVendorsCommand struct {
 	RegistryName            string
 	Publish                 bool
 	Format                  string
+	OutputPath              string
 	JVMVendors              []JVMVendor
 }
 
@@ -166,6 +167,8 @@ func (b *BuildJvmVendorsCommand) BuildSingleBuildpack() error {
 	pkgCmd.Publish = b.Publish
 	pkgCmd.Format = b.Format
 	pkgCmd.OutputName = "jvm-vendors.cnb"
+	pkgCmd.OutputPath = b.OutputPath
+	pkgCmd.SkipClean = b.Format == "file"
 	return pkgCmd.Execute()
 }
 
@@ -203,7 +206,8 @@ func (b *BuildJvmVendorsCommand) BuildMultipleBuildpacks() error {
 		pkgCmd.Publish = b.Publish
 		pkgCmd.Format = b.Format
 		pkgCmd.OutputName = fmt.Sprintf("%s.cnb", selectedVendor.VendorID)
-		pkgCmd.SkipClean = i < len(b.BuildpackIDs)-1 // Skip clean on the last buildpack to avoid cleaning up resources needed for subsequent builds
+		pkgCmd.OutputPath = b.OutputPath
+		pkgCmd.SkipClean = b.Format == "file" || i < len(b.BuildpackIDs)-1
 		if err := pkgCmd.Execute(); err != nil {
 			return err
 		}
