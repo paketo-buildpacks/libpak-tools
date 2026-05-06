@@ -360,11 +360,14 @@ func testBuildpack(t *testing.T, context spec.G, it spec.S) {
 		})
 
 		it("uses default output name with buildpack path prefix for file format", func() {
+			tempDir := t.TempDir()
+			outputDir := filepath.Join(tempDir, "output")
+
 			mockExecutor.On("Execute", mock.MatchedBy(func(e effect.Execution) bool {
 				return e.Command == "pack" &&
 					e.Args[0] == "buildpack" &&
 					e.Args[1] == "package" &&
-					e.Args[2] == "/other/path/buildpackage.cnb" &&
+					e.Args[2] == filepath.Join(outputDir, "buildpackage.cnb") &&
 					e.Args[3] == "--pull-policy" &&
 					e.Args[4] == "if-not-present" &&
 					e.Args[5] == "--format" &&
@@ -377,18 +380,21 @@ func testBuildpack(t *testing.T, context spec.G, it spec.S) {
 			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
 			p.BuildpackID = "some-id"
 			p.Format = "file"
-			p.BuildpackPath = "/other/path"
+			p.BuildpackPath = outputDir
 			p.OutputName = "buildpackage.cnb"
 
 			Expect(p.ExecutePackage("/some/path")).To(Succeed())
 		})
 
 		it("uses custom output name with buildpack path prefix for file format", func() {
+			tempDir := t.TempDir()
+			outputDir := filepath.Join(tempDir, "output")
+
 			mockExecutor.On("Execute", mock.MatchedBy(func(e effect.Execution) bool {
 				return e.Command == "pack" &&
 					e.Args[0] == "buildpack" &&
 					e.Args[1] == "package" &&
-					e.Args[2] == "/other/path/custom-output.cnb" &&
+					e.Args[2] == filepath.Join(outputDir, "custom-output.cnb") &&
 					e.Args[3] == "--pull-policy" &&
 					e.Args[4] == "if-not-present" &&
 					e.Args[5] == "--format" &&
@@ -401,7 +407,7 @@ func testBuildpack(t *testing.T, context spec.G, it spec.S) {
 			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
 			p.BuildpackID = "some-id"
 			p.Format = "file"
-			p.BuildpackPath = "/other/path"
+			p.BuildpackPath = outputDir
 			p.OutputName = "custom-output.cnb"
 
 			Expect(p.ExecutePackage("/some/path")).To(Succeed())
@@ -627,6 +633,37 @@ homepage = "https://example.com"
 			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
 			p.BuildpackID = "some-id"
 			p.BuildpackPath = buildpackPath
+
+			Expect(p.Execute()).To(Succeed())
+		})
+
+		it("bundles composite buildpacks and skips cleaning docker images when SkipClean is true", func() {
+			buildpackPath := t.TempDir()
+			mockExecutor := &mocks.Executor{}
+
+			Expect(os.WriteFile(filepath.Join(buildpackPath, "buildpack.toml"), []byte(`[buildpack]
+id = "some-id"
+version = "1.0.0"
+name = "Some Buildpack"
+description = "A buildpack for testing"
+homepage = "https://example.com"
+`), 0600)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(buildpackPath, "package.toml"), []byte("[metadata]\n"), 0600)).To(Succeed())
+
+			mockExecutor.On("Execute", mock.MatchedBy(func(e effect.Execution) bool {
+				if e.Command != "pack" || e.Args[0] != "buildpack" || e.Args[1] != "package" {
+					return false
+				}
+				Expect(e.Args).To(ContainElement("--config"))
+				Expect(e.Args).To(ContainElement("--flatten"))
+				Expect(e.Dir).To(Equal(buildpackPath))
+				return true
+			})).Return(nil).Once()
+
+			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
+			p.BuildpackID = "some-id"
+			p.BuildpackPath = buildpackPath
+			p.SkipClean = true
 
 			Expect(p.Execute()).To(Succeed())
 		})

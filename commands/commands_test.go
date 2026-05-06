@@ -22,7 +22,10 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	"github.com/paketo-buildpacks/libpak/v2/effect"
+	"github.com/paketo-buildpacks/libpak/v2/effect/mocks"
 	"github.com/sclevine/spec"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/paketo-buildpacks/libpak-tools/builder"
 	"github.com/paketo-buildpacks/libpak-tools/carton"
@@ -278,10 +281,23 @@ homepage = "https://example.com"
 `), 0600)).To(Succeed())
 			Expect(os.WriteFile(filepath.Join(buildpackPath, "package.toml"), []byte("[metadata]\n"), 0600)).To(Succeed())
 
-			p := packager.NewBundleBuildpack()
+			mockExecutor := &mocks.Executor{}
+			mockExecutor.On("Execute", mock.MatchedBy(func(e effect.Execution) bool {
+				return e.Command == "pack" && e.Args[0] == "buildpack" && e.Args[1] == "package"
+			})).Return(nil).Once()
+			mockExecutor.On("Execute", mock.MatchedBy(func(e effect.Execution) bool {
+				return e.Command == "docker" && e.Args[0] == "image" && e.Args[1] == "ls"
+			})).Return(func(ex effect.Execution) error {
+				_, err := ex.Stdout.Write([]byte("  "))
+				Expect(err).NotTo(HaveOccurred())
+				return nil
+			}).Once()
+
+			p := packager.NewBundleBuildpackForTests(mockExecutor, nil)
 			p.BuildpackID = "some-id"
 			p.BuildpackPath = buildpackPath
 			p.BuildpackVersion = "1.0.0"
+			p.Format = "image"
 
 			Expect(runPackageBundleCommand(&p)).To(Succeed())
 			Expect(p.RegistryName).To(Equal("some-id"))
