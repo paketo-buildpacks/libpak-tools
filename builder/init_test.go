@@ -25,5 +25,6 @@ import (
 func TestUnit(t *testing.T) {
 	suite := spec.New("libpak-tools/builder", spec.Report(report.Terminal{}))
 	suite("Builder", testBuilder)
+	suite("BuildTools", testBuildTools)
 	suite.Run(t)
 }

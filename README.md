@@ -36,6 +36,7 @@ Usage:
   libpak-tools [command]
 
 Available Commands:
+  build-build-tools Build Build Tools Buildpacks
   build-jvm-vendors Build JVM Vendors Buildpacks
   completion        Generate the autocompletion script for the specified shell
   dependency        Interact with dependencies
@@ -74,6 +75,38 @@ Flags:
       --single-buildpack                build output is a single buildpack with listed vendors (default: false)
       --strict-filters                  require filter to match all data or just some data, applies to all buildpacks (default: false)
       --vendors stringArray             list of vendors to build
+```
+
+### `libpak-tools build-build-tools`
+
+Build the build tools buildpacks. This is specific to building the Paketo build
+tools buildpacks (Leiningen, Clojure Tools, Gradle, Maven and sbt) from the
+`build-tools` repository. Use `--single-buildpack` to emit one combined
+buildpack, or pass a `--buildpack-id` and `--tools` pair for each per-tool
+buildpack.
+
+```
+> libpak-tools build-build-tools --help
+Build Build Tools Buildpacks
+
+Usage:
+  libpak-tools build-build-tools [flags]
+
+Flags:
+      --buildpack-id stringArray        buildpack id and version in the format 'id@version'
+      --buildpack-path string           path to build-tools buildpack directory
+      --cache-location string           path to cache downloaded dependencies (default: $PWD/dependencies)
+      --dependency-filter stringArray   one or more filters that are applied to exclude dependencies, applies to all buildpacks
+      --format string                   format for the output, either image or file (default: image) (default "image")
+  -h, --help                            help for build-build-tools
+      --include-all-tools               include all of the tools (default: false)
+      --include-dependencies            whether to include dependencies, applies to all buildpacks (default: false)
+      --output-path string              path to directory where output files will be created (default: current directory)
+      --publish                         publish the buildpack to a buildpack registry, applies to all buildpacks (default: false)
+      --registry-name string            prefix for the registry to publish to, applies to all buildpacks (default: the buildpack id)
+      --single-buildpack                build output is a single buildpack with the selected tools (default: false)
+      --strict-filters                  require filter to match all data or just some data, applies to all buildpacks (default: false)
+      --tools stringArray               list of tools to build
 ```
 
 ### `libpak-tools dependency`
