@@ -1,0 +1,43 @@
+[[tools]]
+description = "A Cloud Native Buildpack that provides Leiningen and builds JVM applications with it"
+homepage = "https://github.com/paketo-buildpacks/leiningen"
+buildpack_id = "paketo-buildpacks/leiningen"
+name = "Paketo Buildpack for Leiningen"
+tool_id = "leiningen"
+dependencies = ["lein"]
+
+
+[[tools]]
+description = "A Cloud Native Buildpack that provides Clojure Tools and builds JVM applications with it"
+homepage = "https://github.com/paketo-buildpacks/clojure-tools"
+buildpack_id = "paketo-buildpacks/clojure-tools"
+name = "Paketo Buildpack for Clojure Tools"
+tool_id = "clojure-tools"
+dependencies = ["clojure"]
+
+
+[[tools]]
+description = "A Cloud Native Buildpack that provides Gradle and builds JVM applications with it"
+homepage = "https://github.com/paketo-buildpacks/gradle"
+buildpack_id = "paketo-buildpacks/gradle"
+name = "Paketo Buildpack for Gradle"
+tool_id = "gradle"
+dependencies = ["gradle"]
+
+
+[[tools]]
+description = "A Cloud Native Buildpack that provides Maven and builds JVM applications with it"
+homepage = "https://github.com/paketo-buildpacks/maven"
+buildpack_id = "paketo-buildpacks/maven"
+name = "Paketo Buildpack for Apache Maven"
+tool_id = "maven"
+dependencies = ["maven", "mvnd"]
+
+
+[[tools]]
+description = "A Cloud Native Buildpack that provides sbt and builds JVM applications with it"
+homepage = "https://github.com/paketo-buildpacks/sbt"
+buildpack_id = "paketo-buildpacks/sbt"
+name = "Paketo Buildpack for sbt"
+tool_id = "sbt"
+dependencies = ["sbt"]
