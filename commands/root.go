@@ -39,5 +39,6 @@ func init() {
 	rootCmd.AddCommand(DependencyCommand())
 	rootCmd.AddCommand(BuildJvmVendorsCommand())
 	rootCmd.AddCommand(CICommand())
+	rootCmd.AddCommand(BuildJvmBuildToolsCommand())
 	rootCmd.AddCommand(VersionCommand())
 }

@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/BurntSushi/toml"
 	. "github.com/onsi/gomega"
 	"github.com/paketo-buildpacks/libpak/v2/effect"
 	"github.com/paketo-buildpacks/libpak/v2/effect/mocks"
@@ -51,6 +52,7 @@ func testCommands(t *testing.T, context spec.G, it spec.S) {
 			Expect(subcommands).To(HaveKey("dependency"))
 			Expect(subcommands).To(HaveKey("build-jvm-vendors"))
 			Expect(subcommands).To(HaveKey("ci"))
+			Expect(subcommands).To(HaveKey("build-jvm-build-tools"))
 			Expect(subcommands).To(HaveKey("version"))
 		})
 
@@ -69,6 +71,28 @@ func testCommands(t *testing.T, context spec.G, it spec.S) {
 			})
 
 			Expect(stdout).To(ContainSubstring("libpak-tools test-version"))
+		})
+	})
+
+	context("build-jvm-build-tools command", func() {
+		it("lists the tools in java language family order", func() {
+			data := struct {
+				Tools []builder.BuildTool
+			}{}
+			Expect(toml.Unmarshal(JvmBuildToolsTOML, &data)).To(Succeed())
+
+			var tools []string
+			for _, tool := range data.Tools {
+				tools = append(tools, tool.ToolID)
+			}
+
+			Expect(tools).To(Equal([]string{
+				"leiningen",
+				"clojure-tools",
+				"gradle",
+				"maven",
+				"sbt",
+			}))
 		})
 	})
 

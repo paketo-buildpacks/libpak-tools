@@ -36,18 +36,51 @@ Usage:
   libpak-tools [command]
 
 Available Commands:
-  build-jvm-vendors Build JVM Vendors Buildpacks
-  ci                Utilities for use in CI pipelines
-  completion        Generate the autocompletion script for the specified shell
-  dependency        Interact with dependencies
-  help              Help about any command
-  package           Interact with packages
-  version           Print the version number
+  build-jvm-build-tools Build JVM Build Tools Buildpacks
+  build-jvm-vendors     Build JVM Vendors Buildpacks
+  ci                    Utilities for use in CI pipelines
+  completion            Generate the autocompletion script for the specified shell
+  dependency            Interact with dependencies
+  help                  Help about any command
+  package               Interact with packages
+  version               Print the version number
 
 Flags:
   -h, --help   help for libpak-tools
 
 Use "libpak-tools [command] --help" for more information about a command.
+```
+
+### `libpak-tools build-jvm-build-tools`
+
+Build the JVM build tools buildpacks. This is specific to building the Paketo JVM
+build tools buildpacks (Leiningen, Clojure Tools, Gradle, Maven and sbt) from the
+`jvm-build-tools` repository. Use `--single-buildpack` to emit one combined
+buildpack, or pass a `--buildpack-id` and `--tools` pair for each per-tool
+buildpack.
+
+```
+> libpak-tools build-jvm-build-tools --help
+Build JVM Build Tools Buildpacks
+
+Usage:
+  libpak-tools build-jvm-build-tools [flags]
+
+Flags:
+      --buildpack-id stringArray        buildpack id and version in the format 'id@version'
+      --buildpack-path string           path to jvm-build-tools buildpack directory
+      --cache-location string           path to cache downloaded dependencies (default: $PWD/dependencies)
+      --dependency-filter stringArray   one or more filters that are applied to exclude dependencies, applies to all buildpacks
+      --format string                   format for the output, either image or file (default: image) (default "image")
+  -h, --help                            help for build-jvm-build-tools
+      --include-all-tools               include all of the tools (default: false)
+      --include-dependencies            whether to include dependencies, applies to all buildpacks (default: false)
+      --output-path string              path to directory where output files will be created (default: current directory)
+      --publish                         publish the buildpack to a buildpack registry, applies to all buildpacks (default: false)
+      --registry-name string            prefix for the registry to publish to, applies to all buildpacks (default: the buildpack id)
+      --single-buildpack                build output is a single buildpack with the selected tools (default: false)
+      --strict-filters                  require filter to match all data or just some data, applies to all buildpacks (default: false)
+      --tools stringArray               list of tools to build
 ```
 
 ### `libpak-tools build-jvm-vendors`

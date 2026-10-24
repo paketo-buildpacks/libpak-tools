@@ -28,6 +28,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/buildpacks/libcnb/v2"
 	"github.com/heroku/color"
+	"github.com/mattn/go-shellwords"
 
 	"github.com/paketo-buildpacks/libpak/v2"
 	"github.com/paketo-buildpacks/libpak/v2/effect"
@@ -216,8 +217,15 @@ func (p Package) Create(options ...Option) {
 	file = metadata.PrePackage
 	if file != "" {
 		logger.Headerf("Pre-package with %s", file)
+		parts, err := shellwords.Parse(file)
+		if err != nil {
+			config.exitHandler.Error(fmt.Errorf("unable to parse pre-package script %s\n%w", file, err))
+			return
+		}
+
 		execution := effect.Execution{
-			Command: file,
+			Command: parts[0],
+			Args:    parts[1:],
 			Dir:     p.Source,
 			Stdout:  logger.BodyWriter(),
 			Stderr:  logger.BodyWriter(),

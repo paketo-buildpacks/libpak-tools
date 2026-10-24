@@ -8,6 +8,7 @@ require (
 	github.com/buildpacks/libcnb/v2 v2.1.0
 	github.com/heroku/color v0.0.6
 	github.com/jarcoal/httpmock v1.4.2
+	github.com/mattn/go-shellwords v1.0.16
 	github.com/onsi/gomega v1.44.0
 	github.com/paketo-buildpacks/libpak/v2 v2.2.0
 	github.com/sclevine/spec v1.4.0
