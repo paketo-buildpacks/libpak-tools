@@ -285,7 +285,7 @@ func (p *BundleBuildpack) GZipBuildpack(destDir string) error {
 		return fmt.Errorf("unable to create temporary archive file\n%w", err)
 	}
 	archivePath := archiveFile.Name()
-	defer os.Remove(archivePath)
+	defer func() { _ = os.Remove(archivePath) }()
 
 	err = crush.CreateTarGz(archiveFile, destDir)
 	if err != nil {
@@ -364,16 +364,16 @@ func copyPackageTomlAndAddURI(buildpackPath, destDir string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to open package.toml\n%w", err)
 	}
-	defer inputPackageToml.Close()
+	defer func() { _ = inputPackageToml.Close() }()
 
 	outputPackageTomlPath := filepath.Join(destDir, "package.toml")
 	outputPackageToml, err := os.Create(outputPackageTomlPath)
 	if err != nil {
 		return "", fmt.Errorf("unable to create package.toml\n%w", err)
 	}
-	defer outputPackageToml.Close()
+	defer func() { _ = outputPackageToml.Close() }()
 
-	_, err = outputPackageToml.WriteString(fmt.Sprintf("[buildpack]\nuri = \"%s\"\n\n", destDir))
+	_, err = fmt.Fprintf(outputPackageToml, "[buildpack]\nuri = \"%s\"\n\n", destDir)
 	if err != nil {
 		return "", fmt.Errorf("unable to write uri\n%w", err)
 	}
@@ -398,9 +398,9 @@ func (p *BundleBuildpack) Execute() error {
 	if componentBp, err := sherpa.FileExists(mainCmdPath); err != nil {
 		return fmt.Errorf("unable to check if file exists\n%w", err)
 	} else if componentBp {
-		p.CompileAndBundleComponent(buildDirectory)
+		_ = p.CompileAndBundleComponent(buildDirectory)
 	} else {
-		p.BundleComposite(buildDirectory)
+		_ = p.BundleComposite(buildDirectory)
 	}
 
 	// clean up

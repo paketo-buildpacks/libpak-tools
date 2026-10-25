@@ -419,7 +419,7 @@ func testBuildpack(t *testing.T, context spec.G, it spec.S) {
 
 			relativeRoot := t.TempDir()
 			Expect(os.Chdir(relativeRoot)).To(Succeed())
-			defer os.Chdir(previousWD)
+			defer func() { _ = os.Chdir(previousWD) }()
 
 			absoluteRoot, err := filepath.Abs(".")
 			Expect(err).NotTo(HaveOccurred())
@@ -562,11 +562,11 @@ include-files = ["buildpack.toml"]
 
 			archiveFile, err := os.Open(archivePath)
 			Expect(err).NotTo(HaveOccurred())
-			defer archiveFile.Close()
+			defer func() { _ = archiveFile.Close() }()
 
 			gzReader, err := gzip.NewReader(archiveFile)
 			Expect(err).NotTo(HaveOccurred())
-			defer gzReader.Close()
+			defer func() { _ = gzReader.Close() }()
 
 			tarReader := tar.NewReader(gzReader)
 			contents := map[string]string{}

@@ -56,7 +56,7 @@ func getProjectCycleList(id string) (cycleList, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch release cycles, status: %d", res.StatusCode)

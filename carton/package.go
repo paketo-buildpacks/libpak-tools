@@ -195,7 +195,7 @@ func (p Package) Create(options ...Option) {
 		if err != nil {
 			config.exitHandler.Error(fmt.Errorf("unable to open temporary "+tomlName+".toml file\n%w", err))
 		}
-		defer out.Close()
+		defer func() { _ = out.Close() }()
 
 		if err = t.Execute(out, map[string]interface{}{"version": p.Version}); err != nil {
 			config.exitHandler.Error(fmt.Errorf("unable to execute template %s with version %s\n%w", file, p.Version, err))
