@@ -86,10 +86,11 @@ func NewBundleBuildpack() BundleBuildpack {
 }
 
 func NewBundleBuildpackForTests(executor effect.Executor, exitHandler libcnb.ExitHandler) BundleBuildpack {
-	return BundleBuildpack{
-		executor:    executor,
-		exitHandler: exitHandler,
-	}
+	p := NewBundleBuildpack()
+	p.executor = executor
+	p.exitHandler = exitHandler
+
+	return p
 }
 
 // InferBuildpackPath infers the buildpack path from the buildpack id
@@ -393,14 +394,34 @@ func (p *BundleBuildpack) Execute() error {
 		return fmt.Errorf("unable to create temporary directory\n%w", err)
 	}
 
-	// we use existence of main.go to determine if we are packaging a component or composite buildpack
-	mainCmdPath := filepath.Join(p.BuildpackPath, "cmd/main/main.go")
-	if componentBp, err := sherpa.FileExists(mainCmdPath); err != nil {
-		return fmt.Errorf("unable to check if file exists\n%w", err)
-	} else if componentBp {
-		_ = p.CompileAndBundleComponent(buildDirectory)
+	// We use the existence of an entrypoint to determine if we are packaging a
+	// component or composite buildpack. Older buildpacks use cmd/main, newer
+	// github-config based buildpacks use run/main.
+	entrypoints := []string{
+		filepath.Join(p.BuildpackPath, "cmd", "main", "main.go"),
+		filepath.Join(p.BuildpackPath, "run", "main.go"),
+	}
+
+	componentBp := false
+	for _, entrypoint := range entrypoints {
+		exists, err := sherpa.FileExists(entrypoint)
+		if err != nil {
+			return fmt.Errorf("unable to check if file exists\n%w", err)
+		}
+		if exists {
+			componentBp = true
+			break
+		}
+	}
+
+	if componentBp {
+		if err := p.CompileAndBundleComponent(buildDirectory); err != nil {
+			return err
+		}
 	} else {
-		_ = p.BundleComposite(buildDirectory)
+		if err := p.BundleComposite(buildDirectory); err != nil {
+			return err
+		}
 	}
 
 	// clean up

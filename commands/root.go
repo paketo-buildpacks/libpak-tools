@@ -38,5 +38,6 @@ func init() {
 	rootCmd.AddCommand(PackageCommand())
 	rootCmd.AddCommand(DependencyCommand())
 	rootCmd.AddCommand(BuildJvmVendorsCommand())
+	rootCmd.AddCommand(BuildBuildToolsCommand())
 	rootCmd.AddCommand(VersionCommand())
 }
