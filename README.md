@@ -37,6 +37,7 @@ Usage:
 
 Available Commands:
   build-jvm-vendors Build JVM Vendors Buildpacks
+  ci                Utilities for use in CI pipelines
   completion        Generate the autocompletion script for the specified shell
   dependency        Interact with dependencies
   help              Help about any command
@@ -66,14 +67,36 @@ Flags:
       --cache-location string           path to cache downloaded dependencies (default: $PWD/dependencies)
       --default-vendor string           default vendor to use, if not set the the configured default vendor or first in the vendor list will be used
       --dependency-filter stringArray   one or more filters that are applied to exclude dependencies, applies to all buildpacks
+      --format string                   format for the output, either image or file (default: image) (default "image")
   -h, --help                            help for build-jvm-vendors
       --include-all-vendors             include all of the vendors (default: false)
       --include-dependencies            whether to include dependencies, applies to all buildpacks (default: false)
+      --output-path string              path to directory where output files will be created (default: current directory)
       --publish                         publish the buildpack to a buildpack registry, applies to all buildpacks (default: false)
       --registry-name string            prefix for the registry to publish to, applies to all buildpacks (default: the buildpack id)
       --single-buildpack                build output is a single buildpack with listed vendors (default: false)
       --strict-filters                  require filter to match all data or just some data, applies to all buildpacks (default: false)
       --vendors stringArray             list of vendors to build
+```
+
+### `libpak-tools ci`
+
+Utilities for use in CI pipelines.
+
+```
+> libpak-tools ci --help
+Utilities for use in CI pipelines
+
+Usage:
+  libpak-tools ci [command]
+
+Available Commands:
+  calculate-semver-bump Calculate the highest semver bump between two buildpack.toml files
+
+Flags:
+  -h, --help   help for ci
+
+Use "libpak-tools ci [command] --help" for more information about a command.
 ```
 
 ### `libpak-tools dependency`
@@ -126,6 +149,24 @@ Flags:
   -h, --help   help for version
 ```
 
+### `libpak-tools ci calculate-semver-bump`
+
+Calculate the highest semver bump between two `buildpack.toml` files. Prints
+`major`, `minor`, `patch`, or `none`.
+
+```
+> libpak-tools ci calculate-semver-bump --help
+Calculate the highest semver bump between two buildpack.toml files
+
+Usage:
+  libpak-tools ci calculate-semver-bump [flags]
+
+Flags:
+      --after string    path to the buildpack.toml after updates
+      --before string   path to the buildpack.toml before updates
+  -h, --help            help for calculate-semver-bump
+```
+
 ### `libpak-tools dependency update`
 
 ```
@@ -163,8 +204,10 @@ Flags:
       --buildpack-path string           path to buildpack directory
       --cache-location string           path to cache downloaded dependencies (default: $PWD/dependencies)
       --dependency-filter stringArray   one or more filters that are applied to exclude dependencies
+      --format string                   format for the output, either image or file (default: image) (default "image")
   -h, --help                            help for bundle
       --include-dependencies            whether to include dependencies (default: false)
+      --output-name string              name of the output file when format is set to file (default: buildpackage.cnb) (default "buildpackage.cnb")
       --publish                         publish the buildpack to a buildpack registry (default: false)
       --registry-name string            prefix for the registry to publish to (default: your buildpack id)
       --strict-filters                  require filter to match all data or just some data (default: false)
