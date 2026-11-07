@@ -50,6 +50,7 @@ func testCommands(t *testing.T, context spec.G, it spec.S) {
 			Expect(subcommands).To(HaveKey("package"))
 			Expect(subcommands).To(HaveKey("dependency"))
 			Expect(subcommands).To(HaveKey("build-jvm-vendors"))
+			Expect(subcommands).To(HaveKey("ci"))
 			Expect(subcommands).To(HaveKey("version"))
 		})
 
@@ -144,6 +145,55 @@ func testCommands(t *testing.T, context spec.G, it spec.S) {
 			Expect(cmd.Flags().Lookup("version-pattern")).NotTo(BeNil())
 			Expect(cmd.Flags().Lookup("purl")).NotTo(BeNil())
 			Expect(cmd.Flags().Lookup("cpe")).NotTo(BeNil())
+		})
+	})
+
+	context("ci command", func() {
+		it("registers calculate-semver-bump", func() {
+			cmd := CICommand()
+			subcommands := map[string]struct{}{}
+			for _, sub := range cmd.Commands() {
+				subcommands[sub.Name()] = struct{}{}
+			}
+
+			Expect(cmd.Use).To(Equal("ci"))
+			Expect(cmd.Short).To(Equal("Utilities for use in CI pipelines"))
+			Expect(cmd.Commands()).To(HaveLen(1))
+			Expect(subcommands).To(HaveKey("calculate-semver-bump"))
+		})
+
+		it("configures required calculate-semver-bump flags", func() {
+			cmd := CICalculateSemverBumpCommand()
+
+			Expect(cmd.Use).To(Equal("calculate-semver-bump"))
+			Expect(cmd.Flags().Lookup("before")).NotTo(BeNil())
+			Expect(cmd.Flags().Lookup("after")).NotTo(BeNil())
+		})
+
+		it("prints the calculated bump", func() {
+			dir := t.TempDir()
+			beforePath := filepath.Join(dir, "before.toml")
+			afterPath := filepath.Join(dir, "after.toml")
+
+			Expect(os.WriteFile(beforePath, []byte(`[metadata]
+  [[metadata.dependencies]]
+    id = "jdk"
+    version = "11.0.31"
+`), 0600)).To(Succeed())
+			Expect(os.WriteFile(afterPath, []byte(`[metadata]
+  [[metadata.dependencies]]
+    id = "jdk"
+    version = "11.0.32"
+`), 0600)).To(Succeed())
+
+			cmd := CICalculateSemverBumpCommand()
+			cmd.SetArgs([]string{"--before", beforePath, "--after", afterPath})
+
+			output := testutil.CaptureStdout(t, func() {
+				Expect(cmd.Execute()).To(Succeed())
+			})
+
+			Expect(output).To(Equal("patch\n"))
 		})
 	})
 
