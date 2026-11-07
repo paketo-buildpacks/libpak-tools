@@ -279,14 +279,11 @@ Flags:
 
 ## Making a Release
 
-The project uses Goreleaser for release management. The following steps can be used to cut a release.
+Releases are managed by the `Create or Update Draft Release` GitHub Actions workflow, which comes from the shared [`github-config` library configuration](https://github.com/paketo-buildpacks/github-config/tree/main/library).
 
-1. Tag a new release. `git tag -a vX.Y.Z -m "vX.Y.Z Release"`
-2. Push up the tag. `git push origin vX.Y.Z`
-3. Set Github Token. `export GITHUB_TOKEN=<your-release-token>`
-4. Run Goreleaser. `goreleaser release`
+A push to `main` creates or updates a draft release. The next version is calculated from the labels on the pull requests included in the release, and the `Package` step runs `scripts/package.sh` to build the cross-platform binaries and attach them to the draft. When the draft looks good, publish it from the repository's Releases page.
 
-You can install Goreleaser with `brew install goreleaser`.
+You can also run the workflow manually from the Actions tab, optionally supplying the version to cut.
 
 ## License
 
