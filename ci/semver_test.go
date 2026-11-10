@@ -48,156 +48,124 @@ func testSemver(t *testing.T, context spec.G, it spec.S) {
 		after = filepath.Join(dir, "after.toml")
 	})
 
-	context("no version changes", func() {
-		it("returns none", func() {
-			writeBuildpackTOML(t, before, dependency{"jdk", "11.0.31"})
-			writeBuildpackTOML(t, after, dependency{"jdk", "11.0.31"})
+	context("version bumps", func() {
+		testCases := []struct {
+			name     string
+			before   []dependency
+			after    []dependency
+			expected string
+		}{
+			{
+				name:     "no version changes",
+				before:   []dependency{{"jdk", "11.0.31"}},
+				after:    []dependency{{"jdk", "11.0.31"}},
+				expected: ci.SemverBumpNone,
+			},
+			{
+				name:     "patch version changes",
+				before:   []dependency{{"jdk", "11.0.31"}},
+				after:    []dependency{{"jdk", "11.0.32"}},
+				expected: ci.SemverBumpPatch,
+			},
+			{
+				name:     "minor version changes",
+				before:   []dependency{{"jdk", "11.0.31"}},
+				after:    []dependency{{"jdk", "11.1.0"}},
+				expected: ci.SemverBumpMinor,
+			},
+			{
+				name:     "major version changes",
+				before:   []dependency{{"jdk", "11.0.31"}},
+				after:    []dependency{{"jdk", "12.0.0"}},
+				expected: ci.SemverBumpMajor,
+			},
+			{
+				name: "multiple changes return the highest bump",
+				before: []dependency{
+					{"jdk", "1.0.0"},
+					{"jre", "1.0.0"},
+					{"node", "1.0.0"},
+				},
+				after: []dependency{
+					{"jdk", "1.0.1"},
+					{"jre", "1.1.0"},
+					{"node", "2.0.0"},
+				},
+				expected: ci.SemverBumpMajor,
+			},
+			{
+				name: "does not hide an update to an older major line",
+				before: []dependency{
+					{"jdk", "11.0.31"},
+					{"jdk", "21.0.11"},
+				},
+				after: []dependency{
+					{"jdk", "11.0.32"},
+					{"jdk", "21.0.11"},
+				},
+				expected: ci.SemverBumpPatch,
+			},
+			{
+				name: "treats a new major line as a major bump",
+				before: []dependency{
+					{"jdk", "11.0.31"},
+					{"jdk", "21.0.11"},
+				},
+				after: []dependency{
+					{"jdk", "11.0.31"},
+					{"jdk", "21.0.11"},
+					{"jdk", "25.0.4"},
+				},
+				expected: ci.SemverBumpMajor,
+			},
+			{
+				name: "returns a single bump for duplicate versions",
+				before: []dependency{
+					{"jdk", "11.0.31"},
+					{"jdk", "11.0.31"},
+				},
+				after: []dependency{
+					{"jdk", "11.0.32"},
+					{"jdk", "11.0.32"},
+				},
+				expected: ci.SemverBumpPatch,
+			},
+			{
+				name:     "returns patch for build metadata changes",
+				before:   []dependency{{"jdk", "11.0.32+101"}},
+				after:    []dependency{{"jdk", "11.0.32+102"}},
+				expected: ci.SemverBumpPatch,
+			},
+			{
+				name:     "returns patch for pre-release changes",
+				before:   []dependency{{"jdk", "1.0.0-rc1"}},
+				after:    []dependency{{"jdk", "1.0.0-rc2"}},
+				expected: ci.SemverBumpPatch,
+			},
+			{
+				name: "ignores unparseable versions",
+				before: []dependency{
+					{"jdk", "11.0.31"},
+					{"jre", "not-a-version"},
+				},
+				after: []dependency{
+					{"jdk", "11.0.32"},
+					{"jre", "also-not-a-version"},
+				},
+				expected: ci.SemverBumpPatch,
+			},
+		}
 
-			bump, err := ci.CalculateSemverBump(before, after)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(bump).To(Equal(ci.SemverBumpNone))
-		})
-	})
+		for _, testCase := range testCases {
+			it(testCase.name, func() {
+				writeBuildpackTOML(t, before, testCase.before...)
+				writeBuildpackTOML(t, after, testCase.after...)
 
-	context("patch version changes", func() {
-		it("returns patch", func() {
-			writeBuildpackTOML(t, before, dependency{"jdk", "11.0.31"})
-			writeBuildpackTOML(t, after, dependency{"jdk", "11.0.32"})
-
-			bump, err := ci.CalculateSemverBump(before, after)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(bump).To(Equal(ci.SemverBumpPatch))
-		})
-	})
-
-	context("minor version changes", func() {
-		it("returns minor", func() {
-			writeBuildpackTOML(t, before, dependency{"jdk", "11.0.31"})
-			writeBuildpackTOML(t, after, dependency{"jdk", "11.1.0"})
-
-			bump, err := ci.CalculateSemverBump(before, after)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(bump).To(Equal(ci.SemverBumpMinor))
-		})
-	})
-
-	context("major version changes", func() {
-		it("returns major", func() {
-			writeBuildpackTOML(t, before, dependency{"jdk", "11.0.31"})
-			writeBuildpackTOML(t, after, dependency{"jdk", "12.0.0"})
-
-			bump, err := ci.CalculateSemverBump(before, after)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(bump).To(Equal(ci.SemverBumpMajor))
-		})
-	})
-
-	context("multiple changes", func() {
-		it("returns the highest bump", func() {
-			writeBuildpackTOML(t, before,
-				dependency{"jdk", "1.0.0"},
-				dependency{"jre", "1.0.0"},
-				dependency{"node", "1.0.0"},
-			)
-			writeBuildpackTOML(t, after,
-				dependency{"jdk", "1.0.1"},
-				dependency{"jre", "1.1.0"},
-				dependency{"node", "2.0.0"},
-			)
-
-			bump, err := ci.CalculateSemverBump(before, after)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(bump).To(Equal(ci.SemverBumpMajor))
-		})
-	})
-
-	context("multiple major version lines", func() {
-		it("does not hide an update to an older line", func() {
-			writeBuildpackTOML(t, before,
-				dependency{"jdk", "11.0.31"},
-				dependency{"jdk", "21.0.11"},
-			)
-			writeBuildpackTOML(t, after,
-				dependency{"jdk", "11.0.32"},
-				dependency{"jdk", "21.0.11"},
-			)
-
-			bump, err := ci.CalculateSemverBump(before, after)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(bump).To(Equal(ci.SemverBumpPatch))
-		})
-
-		it("treats a new major line as a major bump", func() {
-			writeBuildpackTOML(t, before,
-				dependency{"jdk", "11.0.31"},
-				dependency{"jdk", "21.0.11"},
-			)
-			writeBuildpackTOML(t, after,
-				dependency{"jdk", "11.0.31"},
-				dependency{"jdk", "21.0.11"},
-				dependency{"jdk", "25.0.4"},
-			)
-
-			bump, err := ci.CalculateSemverBump(before, after)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(bump).To(Equal(ci.SemverBumpMajor))
-		})
-	})
-
-	context("duplicate versions for multiple targets", func() {
-		it("returns a single bump", func() {
-			writeBuildpackTOML(t, before,
-				dependency{"jdk", "11.0.31"},
-				dependency{"jdk", "11.0.31"},
-			)
-			writeBuildpackTOML(t, after,
-				dependency{"jdk", "11.0.32"},
-				dependency{"jdk", "11.0.32"},
-			)
-
-			bump, err := ci.CalculateSemverBump(before, after)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(bump).To(Equal(ci.SemverBumpPatch))
-		})
-	})
-
-	context("build metadata changes", func() {
-		it("returns patch", func() {
-			writeBuildpackTOML(t, before, dependency{"jdk", "11.0.32+101"})
-			writeBuildpackTOML(t, after, dependency{"jdk", "11.0.32+102"})
-
-			bump, err := ci.CalculateSemverBump(before, after)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(bump).To(Equal(ci.SemverBumpPatch))
-		})
-	})
-
-	context("pre-release changes", func() {
-		it("returns patch", func() {
-			writeBuildpackTOML(t, before, dependency{"jdk", "1.0.0-rc1"})
-			writeBuildpackTOML(t, after, dependency{"jdk", "1.0.0-rc2"})
-
-			bump, err := ci.CalculateSemverBump(before, after)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(bump).To(Equal(ci.SemverBumpPatch))
-		})
-	})
-
-	context("unparseable versions", func() {
-		it("ignores them", func() {
-			writeBuildpackTOML(t, before,
-				dependency{"jdk", "11.0.31"},
-				dependency{"jre", "not-a-version"},
-			)
-			writeBuildpackTOML(t, after,
-				dependency{"jdk", "11.0.32"},
-				dependency{"jre", "also-not-a-version"},
-			)
-
-			bump, err := ci.CalculateSemverBump(before, after)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(bump).To(Equal(ci.SemverBumpPatch))
-		})
+				bump, err := ci.CalculateSemverBump(before, after)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(bump).To(Equal(testCase.expected))
+			})
+		}
 	})
 
 	context("invalid input", func() {
