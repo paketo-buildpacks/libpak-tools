@@ -106,6 +106,44 @@ func testSemver(t *testing.T, context spec.G, it spec.S) {
 				expected: ci.SemverBumpPatch,
 			},
 			{
+				name: "measures from the oldest before to the newest after",
+				before: []dependency{
+					{"node", "26.12.1"},
+					{"node", "26.13.0"},
+				},
+				after: []dependency{
+					{"node", "26.13.0"},
+					{"node", "26.13.1"},
+				},
+				expected: ci.SemverBumpMinor,
+			},
+			{
+				name: "measures from the oldest before to the newest after with three versions",
+				before: []dependency{
+					{"node", "26.12.1"},
+					{"node", "26.13.0"},
+					{"node", "26.13.1"},
+				},
+				after: []dependency{
+					{"node", "26.13.0"},
+					{"node", "26.13.1"},
+					{"node", "26.13.2"},
+				},
+				expected: ci.SemverBumpMinor,
+			},
+			{
+				name: "returns patch when only patch versions differ across retained versions",
+				before: []dependency{
+					{"node", "26.13.0"},
+					{"node", "26.13.1"},
+				},
+				after: []dependency{
+					{"node", "26.13.1"},
+					{"node", "26.13.2"},
+				},
+				expected: ci.SemverBumpPatch,
+			},
+			{
 				name: "treats a new major line as a major bump",
 				before: []dependency{
 					{"jdk", "11.0.31"},
