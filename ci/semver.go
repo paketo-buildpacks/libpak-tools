@@ -65,7 +65,10 @@ type dependencyGroups map[dependencyKey]dependencyVersions
 // CalculateSemverBump returns the highest semver bump between two
 // buildpack.toml files. Dependencies are grouped by ID and major version so
 // updates to older lines, such as an older LTS runtime, are not hidden by a
-// newer line using a larger major version.
+// newer line using a larger major version. Within a group the bump is measured
+// from the oldest version before to the newest version after, so retained
+// versions do not hide a larger change, such as 1.1.0 and 1.2.0 becoming 1.2.0
+// and 1.2.1, which is a minor bump.
 func CalculateSemverBump(beforePath, afterPath string) (string, error) {
 	before, err := readDependencyGroups(beforePath)
 	if err != nil {
@@ -129,7 +132,7 @@ func calculateBump(before, after dependencyGroups) string {
 			continue
 		}
 
-		bump := compareVersions(maxVersion(beforeVersions), maxVersion(afterVersions))
+		bump := compareVersions(minVersion(beforeVersions), maxVersion(afterVersions))
 		if bump == SemverBumpNone {
 			// The version strings changed, but the semver precedence did not,
 			// for example when only build metadata changed. Treat the
@@ -155,6 +158,17 @@ func sameVersions(a, b dependencyVersions) bool {
 	}
 
 	return true
+}
+
+func minVersion(versions dependencyVersions) *semver.Version {
+	var minimum *semver.Version
+	for _, version := range versions {
+		if minimum == nil || version.LessThan(minimum) {
+			minimum = version
+		}
+	}
+
+	return minimum
 }
 
 func maxVersion(versions dependencyVersions) *semver.Version {
